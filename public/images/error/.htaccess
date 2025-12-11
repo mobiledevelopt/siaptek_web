@@ -1,0 +1,7 @@
+<FilesMatch "\.(jpg|png|gif|pdf|jpeg|js|css|less|otf|ttf|svg|eot|swf|docx|afm|woff|ufm)$">
+    Allow from all
+</FilesMatch>
+
+<FilesMatch ".*">
+    Deny from all
+</FilesMatch>
