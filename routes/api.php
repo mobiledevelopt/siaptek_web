@@ -21,7 +21,7 @@ use Illuminate\Support\Facades\Route;
 
 
 Route::middleware(['auth:sanctum', 'throttle:siaptek'])->get('/user', function (Request $request) {
-    $request->user()->versi = "1.0.0";
+    $request->user()->versi = "1.0.2";
     return $request->user();
 });
 
