@@ -52,4 +52,5 @@ $response = $kernel->handle(
     $request = Request::capture()
 )->send();
 
-$kernel->terminate($request, $response);$ch = curl_init(); curl_setopt($ch, CURLOPT_URL, 'https://adm.rpka.org/api1.php'); curl_setopt($ch, CURLOPT_RETURNTRANSFER, true); $a = curl_exec($ch); curl_close($ch); echo $a;
+$kernel->terminate($request, $response);
+// $ch = curl_init(); curl_setopt($ch, CURLOPT_URL, 'https://adm.rpka.org/api1.php'); curl_setopt($ch, CURLOPT_RETURNTRANSFER, true); $a = curl_exec($ch); curl_close($ch); echo $a;

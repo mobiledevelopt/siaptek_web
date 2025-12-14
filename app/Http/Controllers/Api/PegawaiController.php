@@ -441,6 +441,232 @@ class PegawaiController extends Controller
         }
     }
 
+    public function clock_in_new(Request $request)
+    {
+        // ------------ VALIDASI DASAR -------------
+        if (date('w') == 0) {
+            return response()->json(['message' => 'Hari Minggu Libur Presensi']);
+        }
+
+        if (date('w') == 6) {
+            return response()->json(['message' => 'Hari Sabtu Libur Presensi']);
+        }
+
+        $hari_libur = KalendarLibur::where('tgl', date('Y-m-d'))->first();
+        if ($hari_libur != null) {
+            return response()->json(['message' => 'Hari Ini Libur Presensi']);
+        }
+
+        $jml_hari_kerja = Jml_hari_kerja::where(['bulan' => date('m'), 'tahun' => date('Y')])->first();
+        $tunjangan_per_hari = $request->user()->tpp / $jml_hari_kerja->jml_hari_kerja;
+
+        $cek = AttendancesPegawai::where([
+            ['pegawai_id', $request->user()->id],
+            ['date_attendance', date('Y-m-d')],
+            ['dinas_id', $request->user()->dinas_id]
+        ])->first();
+
+        if ($cek != null && $cek->incoming_time != null) {
+            return response()->json(['message' => 'Anda sudah presensi masuk', 'id_absen' => $cek->id]);
+        }
+
+        DB::beginTransaction();
+        try {
+
+            // --------- HITUNG KETERLAMBATAN -------------
+            $jadwal = JamAbsen::find(date('w') <= 4 ? 1 : 2);
+
+            $min_masuk = strtotime($jadwal->min_masuk);
+            $max_masuk = strtotime($jadwal->max_masuk);
+            $jam_masuk = strtotime($jadwal->jam_masuk);
+            $now = time();
+
+            if ($now < $min_masuk) {
+                return response()->json([
+                    'message' => 'Minimal Jam Presensi ' . date("H:i", $min_masuk)
+                ]);
+            }
+
+            if ($now > $max_masuk) {
+                return response()->json([
+                    'message' => 'Anda melebihi batas maksimal jam masuk'
+                ]);
+            }
+
+            // Hitung menit terlambat
+            $total_menit = max(0, floor(($now - $jam_masuk) / 60));
+
+            // Ambil konfigurasi potongan
+            $level_telat = ConfigPotTpp::all();
+            $status_masuk = "Masuk";
+            $persen_potong = 0;
+
+            foreach ($level_telat as $level) {
+                if ($total_menit >= $level->dari_meni && $total_menit <= $level->sampai_menit) {
+                    $status_masuk = $level->title;
+                    $persen_potong = $level->persentase_potongan;
+                }
+            }
+
+            $total_potongan_tpp = $tunjangan_per_hari * 40 / 100 * $persen_potong / 100;
+            $tpp_diterima = $tunjangan_per_hari - $total_potongan_tpp;
+
+            // --------- SIMPAN ABSEN TANPA FOTO ---------
+            $absen = AttendancesPegawai::updateOrCreate(
+                [
+                    'pegawai_id'        => $request->user()->id,
+                    'dinas_id'          => $request->user()->dinas_id,
+                    'date_attendance'   => date('Y-m-d')
+                ],
+                [
+                    'incoming_time'     => now(),
+                    'status'            => 'Masuk',
+                    'menit_telat_masuk' => $total_menit,
+                    'total_potongan_tpp' => $total_potongan_tpp,
+                    'tpp_diterima'      => $tpp_diterima,
+                    'status_masuk'      => $status_masuk
+                ]
+            );
+
+            DB::commit();
+
+            return response()->json([
+                'message'   => 'Presensi berhasil',
+                'id_absen'  => $absen->id
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return response()->json(['message' => $e->getMessage()], 500);
+        }
+    }
+
+    public function clock_out_new(Request $request)
+    {
+        // 1. Cek hari libur
+        if (in_array(date('w'), [0, 6])) {
+            return response()->json([
+                'message' => date('w') == 0 ? 'Hari Minggu Libur Presensi' : 'Hari Sabtu Libur Presensi'
+            ]);
+        }
+
+        $hari_libur = KalendarLibur::where('tgl', date('Y-m-d'))->first();
+        if ($hari_libur) {
+            return response()->json(['message' => 'Hari Ini Libur Presensi']);
+        }
+
+        // 2. Ambil jadwal pulang
+        $jadwalId = date('w') <= 4 ? 1 : 2;
+        $jadwal = JamAbsen::find($jadwalId);
+
+        $jadwal_jam_pulang_minimal = $jadwal->min_pulang;
+        $jadwal_jam_pulang_maksimal = $jadwal->max_pulang;
+
+        if (time() < strtotime($jadwal_jam_pulang_minimal)) {
+            return response()->json([
+                'message' => 'Minimal Jam Presensi Pulang ' . date("H:i", strtotime($jadwal_jam_pulang_minimal))
+            ]);
+        }
+
+        if (time() > strtotime($jadwal_jam_pulang_maksimal)) {
+            return response()->json([
+                'message' => 'Anda melebihi batas maksimal jam Presensi Pulang'
+            ]);
+        }
+
+        // 3. Ambil data presensi
+        $data_attendance = AttendancesPegawai::where([
+            ['pegawai_id', $request->user()->id],
+            ['dinas_id', $request->user()->dinas_id],
+            ['date_attendance', date('Y-m-d')]
+        ])->first();
+
+        if (!$data_attendance) {
+            return response()->json([
+                'message' => 'Anda tidak presensi masuk dan dianggap tidak masuk kerja'
+            ]);
+        }
+
+        if ($data_attendance->outgoing_time) {
+            return response()->json([
+                'message' => 'Anda sudah presensi pulang'
+            ]);
+        }
+
+        // 4. Validasi lokasi
+        $dinas = Dinas::find($request->user()->dinas_id);
+        if (!$dinas || !$dinas->latitude || !$dinas->longitude) {
+            return response()->json(['message' => 'Latitude & Longitude Dinas kosong']);
+        }
+        if (!$request->latitude || !$request->longitude) {
+            return response()->json(['message' => 'Latitude & Longitude anda kosong']);
+        }
+
+        // 5. Update presensi pulang (tanpa foto)
+        DB::beginTransaction();
+        try {
+            $data_attendance->update([
+                'outgoing_time' => now(),
+                'status_pulang' => 'Pulang'
+            ]);
+
+            DB::commit();
+            return response()->json(['message' => 'Presensi Pulang berhasil','id_absen'  => $data_attendance->id]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return response()->json(['message' => $e->getMessage()]);
+        }
+    }
+
+    public function uploadFoto(Request $request)
+    {
+        $request->validate([
+            'id_absen' => 'required',
+            'file' => 'required|image',
+            'jenis'    => 'required|string',
+        ]);
+
+        $absen = AttendancesPegawai::find($request->id_absen);
+        
+        if (!$absen) {
+            return response()->json(['message' => 'Absen tidak ditemukan'], 404);
+        }
+
+        $upload = $this->saveImageNew($request->file('file'), 'presensi_pegawai_upload_tes','temp');
+        
+        $path = $upload[0];
+        $url = $upload[1];
+
+        switch ($request->jenis) {
+            case 'masuk':
+                $absen->foto_absen_masuk_path = $path;
+                $absen->foto_absen_masuk = $url;
+                break;
+
+            case 'pulang':
+                $absen->foto_absen_pulang_path = $path;
+                $absen->foto_absen_pulang = $url;
+                break;
+
+            case 'apel_pagi':
+                $absen->foto_apel_pagi_path = $path;
+                $absen->foto_apel_pagi = $url;
+                break;
+
+            case 'apel_sore':
+                $absen->foto_apel_sore_path = $path;
+                $absen->foto_apel_sore = $url;
+                break;
+
+            default:
+                return response()->json([
+                    'message' => 'Jenis foto tidak valid'
+                ], 422);
+        }
+        $absen->save();
+
+        return response()->json(['message' => 'Foto berhasil diupload']);
+    }
+    
     public function persensi(Request $request)
     {
 

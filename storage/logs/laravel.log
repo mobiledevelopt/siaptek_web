@@ -1,0 +1,35 @@
+[2025-12-11 16:39:24] local.INFO: app:move-compress-image RUN CRON  
+[2025-12-11 16:39:24] local.INFO: attendances count1  
+[2025-12-11 16:39:24] local.INFO: move image /Users/mandy/Desktop/Project/siaptek/siaptek/storage/app/public/presensi_pegawai_upload_tes/1212321_1765445292.jpg  
+[2025-12-11 16:40:18] local.INFO: app:move-compress-image RUN CRON  
+[2025-12-11 16:40:18] local.INFO: attendances count1  
+[2025-12-11 16:40:18] local.INFO: move image /Users/mandy/Desktop/Project/siaptek/siaptek/storage/app/public/presensi_pegawai_upload_tes/1212321_1765445292.jpg  
+[2025-12-11 16:40:18] local.ERROR: Object of class Illuminate\Foundation\Bus\PendingDispatch could not be converted to string {"exception":"[object] (Error(code: 0): Object of class Illuminate\\Foundation\\Bus\\PendingDispatch could not be converted to string at /Users/mandy/Desktop/Project/siaptek/siaptek/app/Console/Commands/MoveCompressImage.php:51)
+[stacktrace]
+#0 /Users/mandy/Desktop/Project/siaptek/siaptek/app/Console/Commands/MoveCompressImage.php(36): App\\Console\\Commands\\MoveCompressImage->processImage('presensi_pegawa...', 'temp')
+#1 /Users/mandy/Desktop/Project/siaptek/siaptek/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(36): App\\Console\\Commands\\MoveCompressImage->handle()
+#2 /Users/mandy/Desktop/Project/siaptek/siaptek/vendor/laravel/framework/src/Illuminate/Container/Util.php(41): Illuminate\\Container\\BoundMethod::Illuminate\\Container\\{closure}()
+#3 /Users/mandy/Desktop/Project/siaptek/siaptek/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(93): Illuminate\\Container\\Util::unwrapIfClosure(Object(Closure))
+#4 /Users/mandy/Desktop/Project/siaptek/siaptek/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(35): Illuminate\\Container\\BoundMethod::callBoundMethod(Object(Illuminate\\Foundation\\Application), Array, Object(Closure))
+#5 /Users/mandy/Desktop/Project/siaptek/siaptek/vendor/laravel/framework/src/Illuminate/Container/Container.php(662): Illuminate\\Container\\BoundMethod::call(Object(Illuminate\\Foundation\\Application), Array, Array, NULL)
+#6 /Users/mandy/Desktop/Project/siaptek/siaptek/vendor/laravel/framework/src/Illuminate/Console/Command.php(211): Illuminate\\Container\\Container->call(Array)
+#7 /Users/mandy/Desktop/Project/siaptek/siaptek/vendor/symfony/console/Command/Command.php(326): Illuminate\\Console\\Command->execute(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Illuminate\\Console\\OutputStyle))
+#8 /Users/mandy/Desktop/Project/siaptek/siaptek/vendor/laravel/framework/src/Illuminate/Console/Command.php(180): Symfony\\Component\\Console\\Command\\Command->run(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Illuminate\\Console\\OutputStyle))
+#9 /Users/mandy/Desktop/Project/siaptek/siaptek/vendor/symfony/console/Application.php(1096): Illuminate\\Console\\Command->run(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+#10 /Users/mandy/Desktop/Project/siaptek/siaptek/vendor/symfony/console/Application.php(324): Symfony\\Component\\Console\\Application->doRunCommand(Object(App\\Console\\Commands\\MoveCompressImage), Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+#11 /Users/mandy/Desktop/Project/siaptek/siaptek/vendor/symfony/console/Application.php(175): Symfony\\Component\\Console\\Application->doRun(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+#12 /Users/mandy/Desktop/Project/siaptek/siaptek/vendor/laravel/framework/src/Illuminate/Foundation/Console/Kernel.php(201): Symfony\\Component\\Console\\Application->run(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+#13 /Users/mandy/Desktop/Project/siaptek/siaptek/artisan(35): Illuminate\\Foundation\\Console\\Kernel->handle(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+#14 {main}
+"} 
+[2025-12-11 16:42:52] local.ERROR: Error processing image move compress: . Error: Image source not readable .Path: /Users/mandy/Desktop/Project/siaptek/siaptek/storage/app/public/presensi_pegawai_upload_tes/1212321_1765379480.png  
+[2025-12-11 16:42:52] local.ERROR: Error processing image move compress: . Error: Image source not readable .Path: /Users/mandy/Desktop/Project/siaptek/siaptek/storage/app/public/presensi_pegawai_upload_tes/1212321_1765379510.png  
+[2025-12-11 16:42:52] local.ERROR: Error processing image move compress: . Error: Image source not readable .Path: /Users/mandy/Desktop/Project/siaptek/siaptek/storage/app/public/presensi_pegawai_upload_tes/1212321_1765379570.png  
+[2025-12-11 16:42:52] local.ERROR: Error processing image move compress: . Error: Image source not readable .Path: /Users/mandy/Desktop/Project/siaptek/siaptek/storage/app/public/presensi_pegawai_upload_tes/1212321_1765379647.png  
+[2025-12-11 16:42:52] local.INFO: Image move compress successfully: 1212321_1765445292.jpg  
+[2025-12-11 16:42:52] local.INFO: Image move compress successfully: 1212321_1765445292.jpg  
+[2025-12-11 16:42:52] local.INFO: Image move compress successfully: 1212321_1765445292.jpg  
+[2025-12-11 16:42:52] local.INFO: Image move compress successfully: 1212321_1765445292.jpg  
+[2025-12-11 16:42:52] local.INFO: Image move compress successfully: 1212321_1765445292.jpg  
+[2025-12-11 16:42:52] local.INFO: Image move compress successfully: 1212321_1765445292.jpg  
+[2025-12-11 16:46:13] local.INFO: Image saved successfully: 1212321_1765446373.jpg  

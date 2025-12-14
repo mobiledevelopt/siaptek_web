@@ -82,6 +82,8 @@ class Dinas extends Controller
                 $row->name = $request->name;
                 $row->latitude = trim($request->latitude);
                 $row->longitude = trim($request->longitude);
+                $row->latitude_2 = trim($request->latitude_2);
+                $row->longitude_2 = trim($request->longitude_2);
 
                 if ($row->save()) {
                     $cek_jadwal_apel = JadwalApel::where('dinas_id', $row->id)->first();
@@ -197,7 +199,9 @@ class Dinas extends Controller
                 $data_update = [
                     "name"      => $request->name,
                     "latitude"  => $request->latitude,
-                    "longitude" => $request->longitude
+                    "longitude" => $request->longitude,
+                    "latitude_2"  => $request->latitude_2,
+                    "longitude_2" => $request->longitude_2
                 ];
 
                 $data = ModelsDinas::findOrFail($id);

@@ -25,6 +25,8 @@
                                 <th>Dinas</th>
                                 <th>Latitude</th>
                                 <th>Longitude</th>
+                                <th>Latitude 2</th>
+                                <th>Longitude 2</th>
                                 <th>Action</th>
                             </tr>
                         </thead>
@@ -78,6 +80,14 @@
                 {
                     data: 'longitude',
                     name: 'longitude',
+                },
+                {
+                    data: 'latitude_2',
+                    name: 'latitude_2',
+                },
+                {
+                    data: 'longitude_2',
+                    name: 'longitude_2',
                 },
                 {
                     data: 'action',

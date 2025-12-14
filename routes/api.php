@@ -35,6 +35,10 @@ Route::middleware(['auth:sanctum', 'throttle:siaptek'])->group(function () {
         Route::post('/checkin', [\App\Http\Controllers\Api\PegawaiController::class, 'clock_in']);
         Route::post('/checkout', [\App\Http\Controllers\Api\PegawaiController::class, 'clock_out']);
         Route::apiResource('/daftar_hadir_apel', \App\Http\Controllers\Api\DaftarHadirApelController::class);
+        Route::post('/checkinnew', [\App\Http\Controllers\Api\PegawaiController::class, 'clock_in_new']);
+        Route::post('/checkoutnew', [\App\Http\Controllers\Api\PegawaiController::class, 'clock_out_new']);
+        Route::post('/upload_foto_absen', [\App\Http\Controllers\Api\PegawaiController::class, 'uploadFoto']);
+
     });
     
     

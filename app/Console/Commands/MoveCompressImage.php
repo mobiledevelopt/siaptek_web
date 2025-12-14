@@ -30,6 +30,7 @@ class MoveCompressImage extends Command
     {
         Log::info("app:move-compress-image RUN CRON");
         $attendances = AttendancesPegawai::where('date_attendance', date('Y-m-d'))->where('status', 'Masuk')->get();
+        Log::info("attendances count".$attendances->count());
         foreach ($attendances as $item) {
             // Check and save images for each path
             $this->processImage($item->foto_absen_masuk_path, "temp");

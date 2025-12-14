@@ -13,7 +13,9 @@ class Dinas extends Model
         "id",
         "name",
         "latitude",
-        "longitude"
+        "longitude",
+        "latitude_2",
+        "longitude_2"
     ];
 
     public function jadwal_apel()

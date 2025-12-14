@@ -36,6 +36,14 @@
                         <label class="form-label mb-0">Longitude</label>
                         <input type="text" value="{{ @$edit['longitude'] }}" name="longitude" class="form-control" autocomplete="off" />
                     </div>
+                    <div class="form-group mb-3">
+                        <label class="form-label mb-0">Latitude 2</label>
+                        <input type="text" name="latitude_2" class="form-control" value="{{ @$edit['latitude_2'] }}" />
+                    </div>
+                    <div class="form-group mb-4">
+                        <label class="form-label mb-0">Longitude 2</label>
+                        <input type="text" value="{{ @$edit['longitude_2'] }}" name="longitude_2" class="form-control" autocomplete="off" />
+                    </div>
                     <div class="form-group text-end">
                         <button type="submit" class="btn btn-primary">Submit</button>
                     </div>

@@ -64,23 +64,23 @@ class DaftarHadirApelController extends Controller
         //     'required' => ':attribute harus terisi.',
         // ]);
         
-        $validator = Validator::make($request->all(), [
-            'file' => 'required|max:10000',
-        ], [
-            'file.required' => 'Wajib Foto Selfi',
-            'file.max' => 'Max ukuran foto 10 MB',
-        ]);
+        // $validator = Validator::make($request->all(), [
+        //     'file' => 'required|max:10000',
+        // ], [
+        //     'file.required' => 'Wajib Foto Selfi',
+        //     'file.max' => 'Max ukuran foto 10 MB',
+        // ]);
 
 
-        if ($validator->fails()) {
-            $messages = [];
-            $errors = $validator->errors();
-            foreach ($errors->all() as $message) {
-                array_push($messages, $message);
-            }
-            $response['message'] = implode("  ", $messages);
-            return response()->json($response, $code);
-        }
+        // if ($validator->fails()) {
+        //     $messages = [];
+        //     $errors = $validator->errors();
+        //     foreach ($errors->all() as $message) {
+        //         array_push($messages, $message);
+        //     }
+        //     $response['message'] = implode("  ", $messages);
+        //     return response()->json($response, $code);
+        // }
 
         // cek jadwal apel pagi / sore
         $jadwal_apel = JadwalApel::where(['dinas_id' => $request->user()->dinas_id, 'hari' => date('w')])->first();
@@ -167,16 +167,16 @@ class DaftarHadirApelController extends Controller
         DB::beginTransaction();
         try {
 
-            if ($request->hasFile('file')) {
-                // $path = $this->UploadFile($request->file('file'), 'apel_pegawai'); //use the method in the trait
-                // $attachment = url('/storage/') . '/' . $path;
-                $upload = $this->saveImageNew($request->file('file'), 'apel_pegawai', 'temp_apel');
-                $path = $upload[0];
-                $attachment = $upload[1];
-            }
+            // if ($request->hasFile('file')) {
+            //     // $path = $this->UploadFile($request->file('file'), 'apel_pegawai'); //use the method in the trait
+            //     // $attachment = url('/storage/') . '/' . $path;
+            //     $upload = $this->saveImageNew($request->file('file'), 'apel_pegawai', 'temp_apel');
+            //     $path = $upload[0];
+            //     $attachment = $upload[1];
+            // }
 
             if (time() < strtotime('12:00')) {
-                AttendancesPegawai::updateOrCreate(
+               $absen = AttendancesPegawai::updateOrCreate(
                     [
                         'pegawai_id' => $request->user()->id,
                         'dinas_id' => $request->user()->dinas_id,
@@ -190,12 +190,13 @@ class DaftarHadirApelController extends Controller
                         'status_apel_pagi' => "Hadir",
                         'potongan_tidak_apel_pagi' => 0,
                         'potongan_tidak_apel_pagi_persen' => 0,
-                        'foto_apel_pagi_path' => $path,
-                        'foto_apel_pagi' => $attachment
+                        // 'foto_apel_pagi_path' => $path,
+                        // 'foto_apel_pagi' => $attachment
                     ]
                 );
+                $message = 'Presensi Apel Pagi Berhasil';
             } else {
-                AttendancesPegawai::updateOrCreate(
+               $absen = AttendancesPegawai::updateOrCreate(
                     [
                         'pegawai_id' => $request->user()->id,
                         'dinas_id' => $request->user()->dinas_id,
@@ -209,15 +210,17 @@ class DaftarHadirApelController extends Controller
                         'status_apel_sore' => "Hadir",
                         'potongan_tidak_apel_sore' => 0,
                         'potongan_tidak_apel_sore_persen' => 0,
-                        'foto_apel_sore_path' => $path,
-                        'foto_apel_sore' => $attachment
+                        // 'foto_apel_sore_path' => $path,
+                        // 'foto_apel_sore' => $attachment
                     ]
                 );
+                $message = 'Presensi Apel Sore Berhasil';
             }
 
             DB::commit();
             return response()->json([
-                'message' => 'Presensi Apel Berhasil'
+                'message' => $message,
+                'id_absen'  => $absen->id
             ]);
         } catch (\Throwable $throw) {
             DB::rollBack();
