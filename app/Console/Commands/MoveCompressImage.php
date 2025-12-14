@@ -46,6 +46,7 @@ class MoveCompressImage extends Command
             [$pathFile, $fileName] = explode('/', $imagePath);
             $fullPath = storage_path("app/public/{$pathFile}/{$fileName}");
             if (!file_exists($fullPath)) {
+                Log::info("SaveImageJob");
                 SaveImageJob::dispatch("{$tempPath}/{$fileName}", "{$pathFile}/{$fileName}", $fileName, $tempPath);
             }
         }
