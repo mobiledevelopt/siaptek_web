@@ -542,11 +542,13 @@ class PegawaiController extends Controller
         }
 
         // ===== CACHE JADWAL =====
-        $jadwal = cache()->remember(
-            'jam_absen_pulang_' . date('w'),
-            3600,
-            fn() => JamAbsen::find(date('w') <= 4 ? 1 : 2)
-        );
+        // $jadwal = cache()->remember(
+        //     'jam_absen_pulang_' . date('w'),
+        //     3600,
+        //     fn() => JamAbsen::find(date('w') <= 4 ? 1 : 2)
+        // );
+
+        $jadwal = JamAbsen::find(date('w') <= 4 ? 1 : 2);
 
         if (time() < strtotime($jadwal->min_pulang)) {
             return response()->json([
