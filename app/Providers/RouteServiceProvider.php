@@ -29,7 +29,7 @@ class RouteServiceProvider extends ServiceProvider
         // });
 
         RateLimiter::for('siaptek', function (Request $request) {
-            return Limit::perMinute(10000)
+            return Limit::perMinute(1000)
                 // ->by($request->user()?->id ?: $request->ip())
                 ->response(function () {
                     return response()->json(['message' => 'Terlalu banyak permintaan. Harap tunggu selama 1 menit \n'], 429);
