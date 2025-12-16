@@ -840,16 +840,17 @@ class PegawaiController extends Controller
 
     public function show(string $id)
     {
+        // dd('a')
         try {
             // Cache data pegawai
-            $user = Cache::remember("pegawai_{$id}", now()->addMinutes(10), function() use ($id) {
-                return Pegawai::findOrFail($id);
-            });
-
-            // Cache versi aplikasi
-            $versi = Cache::remember('app_version', now()->addMinutes(10), function() {
-                return DB::table('versi')->value('versi');
-            });
+            // $user = Cache::remember("pegawai_{$id}", now()->addMinutes(10), function() use ($id) {
+            //     return Pegawai::findOrFail($id);
+            // });
+            $user = Pegawai::findOrFail($id);
+            // // Cache versi aplikasi
+            // $versi = Cache::remember('app_version', now()->addMinutes(10), function() {
+            //     return DB::table('versi')->value('versi');
+            // });
 
             // Menghitung total TPP diterima berdasarkan rentang tanggal bulan ini
             $from = Carbon::now()->startOfMonth()->toDateString();
@@ -860,7 +861,7 @@ class PegawaiController extends Controller
             //     ->sum('tpp_diterima');
             $tpp = 0;
             // Menambahkan versi ke dalam data user
-            $user->versi = $versi;
+            $user->versi = '1.0.2-dev';
 
             return response()->json([
                 'status' => 'success',
