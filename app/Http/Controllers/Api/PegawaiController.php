@@ -588,7 +588,7 @@ class PegawaiController extends Controller
 
         if ($updated === 0) {
             return response()->json([
-                'message' => 'Anda belum presensi masuk atau sudah presensi pulang'
+                'message' => 'Anda sudah presensi pulang'
             ]);
         }
 
