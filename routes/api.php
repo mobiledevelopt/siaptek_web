@@ -20,12 +20,12 @@ use Illuminate\Support\Facades\Route;
 // });
 
 
-Route::middleware(['auth:sanctum', 'throttle:60:1'])->get('/user', function (Request $request) {
+Route::middleware(['auth:sanctum', 'throttle:siaptek'])->get('/user', function (Request $request) {
     $request->user()->versi = "1.0.2";
     return $request->user();
 });
 
-Route::middleware(['auth:sanctum', 'throttle:siaptek'])->group(function () {
+Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::post('/logout', [\App\Http\Controllers\Api\AuthController::class, 'logout']);
     
     Route::middleware(['auth:sanctum','throttle:siaptek_post'])->group(function () {
