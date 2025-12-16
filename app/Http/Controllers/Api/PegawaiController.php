@@ -866,10 +866,7 @@ class PegawaiController extends Controller
             return response()->json([
                 // 'status' => 'success',
                 'message' => 'success',
-                'data' => [
-                    'user' => $user,
-                    'tpp' => "Rp " . number_format($tpp, 2, ',', '.')
-                ]
+                'results' => ['data' => [$user], 'tpp' => "Rp " . number_format($tpp, 2, ',', '.')]
             ], 200);
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
