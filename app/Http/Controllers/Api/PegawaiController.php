@@ -24,6 +24,8 @@ use Intervention\Image\ImageManager;
 use Imagick;
 use Maestroerror\HeicToJpg;
 use Carbon\Carbon;
+use Exception;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 class PegawaiController extends Controller
@@ -46,7 +48,7 @@ class PegawaiController extends Controller
                 array_push($messages, $message);
             }
             $response['message'] = implode("  ", $messages);
-            return response()->json($response,422);
+            return response()->json($response, 422);
         }
 
         // 0 minggu, 1 senin, 2 selasa, 3 rabu, 4 kamis, 5 jumat, 6 sabtu
@@ -133,7 +135,7 @@ class PegawaiController extends Controller
         $path = null;
         $attachment = null;
 
-        
+
         DB::beginTransaction();
         try {
 
@@ -141,7 +143,7 @@ class PegawaiController extends Controller
                 // $path = $this->UploadFile($request->file('file'), 'persensi_pegawai'); //use the method in the trait
                 // $attachment = url('/storage/') . '/' . $path;
                 // $upload = $this->saveImage($request->file('file'), 'persensi_pegawai');
-                $upload = $this->saveImageNew($request->file('file'), 'persensi_pegawai','temp');
+                $upload = $this->saveImageNew($request->file('file'), 'persensi_pegawai', 'temp');
                 $path = $upload[0];
                 $attachment = $upload[1];
             }
@@ -253,15 +255,15 @@ class PegawaiController extends Controller
             DB::rollBack();
             return response()->json([
                 'message' => $throw->getMessage()
-            ],500);
+            ], 500);
         }
     }
 
     public function clock_out(Request $request)
     {
-        
+
         $validator = Validator::make($request->all(), [
-           'file' => 'required|max:10000',
+            'file' => 'required|max:10000',
         ], [
             'file.required' => 'Wajib Foto Selfi',
             'file.max' => 'Max ukuran foto 10 MB',
@@ -274,9 +276,9 @@ class PegawaiController extends Controller
                 array_push($messages, $message);
             }
             $response['message'] = implode("  ", $messages);
-            return response()->json($response,422);
+            return response()->json($response, 422);
         }
-        
+
         //cek jadwal absen
         if (date('w') == 0) {
             return response()->json([
@@ -289,7 +291,7 @@ class PegawaiController extends Controller
                 'message' => 'Hari Sabtu Libur Presensi',
             ]);
         }
-        
+
         $hari_libur = KalendarLibur::where('tgl', date('Y-m-d'))->first();
 
         if ($hari_libur != null) {
@@ -407,7 +409,7 @@ class PegawaiController extends Controller
                 // $attachment = url('/storage/') . '/persensi_pegawai/' . $imageName;
 
                 // $upload = $this->saveImage($request->file('file'), 'persensi_pegawai');
-                $upload = $this->saveImageNew($request->file('file'), 'persensi_pegawai','temp');
+                $upload = $this->saveImageNew($request->file('file'), 'persensi_pegawai', 'temp');
                 $path = $upload[0];
                 $attachment = $upload[1];
             }
@@ -437,185 +439,147 @@ class PegawaiController extends Controller
             DB::rollBack();
             return response()->json([
                 'message' => $throw->getMessage()
-            ],500);
+            ], 500);
         }
     }
 
     public function clock_in_new(Request $request)
     {
-        // ------------ VALIDASI DASAR -------------
-        if (date('w') == 0) {
-            return response()->json(['message' => 'Hari Minggu Libur Presensi']);
+        // ===== VALIDASI AWAL (CEPAT) =====
+        if (in_array(date('w'), [0, 6])) {
+            return response()->json(['message' => 'Hari Libur Presensi']);
         }
 
-        if (date('w') == 6) {
-            return response()->json(['message' => 'Hari Sabtu Libur Presensi']);
-        }
-
-        $hari_libur = KalendarLibur::where('tgl', date('Y-m-d'))->first();
-        if ($hari_libur != null) {
+        if (KalendarLibur::whereDate('tgl', today())->exists()) {
             return response()->json(['message' => 'Hari Ini Libur Presensi']);
         }
 
-        $jml_hari_kerja = Jml_hari_kerja::where(['bulan' => date('m'), 'tahun' => date('Y')])->first();
-        $tunjangan_per_hari = $request->user()->tpp / $jml_hari_kerja->jml_hari_kerja;
+        // ===== CACHE KONFIGURASI =====
 
-        $cek = AttendancesPegawai::where([
-            ['pegawai_id', $request->user()->id],
-            ['date_attendance', date('Y-m-d')],
-            ['dinas_id', $request->user()->dinas_id]
-        ])->first();
+        $jadwal = cache()->remember(
+            'jam_absen_' . date('w'),
+            3600,
+            fn() => JamAbsen::find(date('w') <= 4 ? 1 : 2)
+        );
 
-        if ($cek != null && $cek->incoming_time != null) {
-            return response()->json(['message' => 'Anda sudah presensi masuk', 'id_absen' => $cek->id]);
+        $level_telat = cache()->remember(
+            'config_pot_tpp',
+            3600,
+            fn() => ConfigPotTpp::all()
+        );
+
+        // ===== HITUNG JAM =====
+        $now = time();
+        if ($now < strtotime($jadwal->min_masuk)) {
+            return response()->json(['message' => 'Minimal Jam Presensi ' . $jadwal->min_masuk]);
         }
 
-        DB::beginTransaction();
+        if ($now > strtotime($jadwal->max_masuk)) {
+            return response()->json(['message' => 'Anda melebihi batas maksimal jam masuk']);
+        }
+
+        $total_menit = max(0, floor(($now - strtotime($jadwal->jam_masuk)) / 60));
+
+        $status_masuk = 'Masuk';
+        $persen_potong = 0;
+
+        foreach ($level_telat as $level) {
+            if ($total_menit >= $level->dari_meni && $total_menit <= $level->sampai_menit) {
+                $status_masuk = $level->title;
+                $persen_potong = $level->persentase_potongan;
+                break;
+            }
+        }
+
+        // ===== ATOMIC INSERT (SUPER CEPAT) =====
         try {
-
-            // --------- HITUNG KETERLAMBATAN -------------
-            $jadwal = JamAbsen::find(date('w') <= 4 ? 1 : 2);
-
-            $min_masuk = strtotime($jadwal->min_masuk);
-            $max_masuk = strtotime($jadwal->max_masuk);
-            $jam_masuk = strtotime($jadwal->jam_masuk);
-            $now = time();
-
-            if ($now < $min_masuk) {
-                return response()->json([
-                    'message' => 'Minimal Jam Presensi ' . date("H:i", $min_masuk)
-                ]);
-            }
-
-            if ($now > $max_masuk) {
-                return response()->json([
-                    'message' => 'Anda melebihi batas maksimal jam masuk'
-                ]);
-            }
-
-            // Hitung menit terlambat
-            $total_menit = max(0, floor(($now - $jam_masuk) / 60));
-
-            // Ambil konfigurasi potongan
-            $level_telat = ConfigPotTpp::all();
-            $status_masuk = "Masuk";
-            $persen_potong = 0;
-
-            foreach ($level_telat as $level) {
-                if ($total_menit >= $level->dari_meni && $total_menit <= $level->sampai_menit) {
-                    $status_masuk = $level->title;
-                    $persen_potong = $level->persentase_potongan;
-                }
-            }
-
-            $total_potongan_tpp = $tunjangan_per_hari * 40 / 100 * $persen_potong / 100;
-            $tpp_diterima = $tunjangan_per_hari - $total_potongan_tpp;
-
-            // --------- SIMPAN ABSEN TANPA FOTO ---------
-            $absen = AttendancesPegawai::updateOrCreate(
-                [
-                    'pegawai_id'        => $request->user()->id,
-                    'dinas_id'          => $request->user()->dinas_id,
-                    'date_attendance'   => date('Y-m-d')
-                ],
-                [
-                    'incoming_time'     => now(),
-                    'status'            => 'Masuk',
-                    'menit_telat_masuk' => $total_menit,
-                    'total_potongan_tpp' => $total_potongan_tpp,
-                    'tpp_diterima'      => $tpp_diterima,
-                    'status_masuk'      => $status_masuk
-                ]
-            );
-
-            DB::commit();
-
-            return response()->json([
-                'message'   => 'Presensi berhasil',
-                'id_absen'  => $absen->id
+            $absen = AttendancesPegawai::create([
+                'pegawai_id' => $request->user()->id,
+                'dinas_id' => $request->user()->dinas_id,
+                'date_attendance' => today(),
+                'incoming_time' => now(),
+                'status' => 'Masuk',
+                'menit_telat_masuk' => $total_menit,
+                'status_masuk' => $status_masuk
             ]);
-        } catch (\Throwable $e) {
-            DB::rollBack();
-            return response()->json(['message' => $e->getMessage()], 500);
+        } catch (\Illuminate\Database\QueryException $e) {
+            return response()->json([
+                'message' => 'Anda sudah presensi masuk'
+            ]);
         }
+
+        return response()->json([
+            'message' => 'Presensi berhasil',
+            'id_absen' => $absen->id
+        ]);
     }
+
 
     public function clock_out_new(Request $request)
     {
-        // 1. Cek hari libur
+        // ===== VALIDASI HARI =====
         if (in_array(date('w'), [0, 6])) {
-            return response()->json([
-                'message' => date('w') == 0 ? 'Hari Minggu Libur Presensi' : 'Hari Sabtu Libur Presensi'
-            ]);
+            return response()->json(['message' => 'Hari Libur Presensi']);
         }
 
-        $hari_libur = KalendarLibur::where('tgl', date('Y-m-d'))->first();
-        if ($hari_libur) {
+        if (KalendarLibur::whereDate('tgl', today())->exists()) {
             return response()->json(['message' => 'Hari Ini Libur Presensi']);
         }
 
-        // 2. Ambil jadwal pulang
-        $jadwalId = date('w') <= 4 ? 1 : 2;
-        $jadwal = JamAbsen::find($jadwalId);
+        // ===== CACHE JADWAL =====
+        $jadwal = cache()->remember(
+            'jam_absen_pulang_' . date('w'),
+            3600,
+            fn() => JamAbsen::find(date('w') <= 4 ? 1 : 2)
+        );
 
-        $jadwal_jam_pulang_minimal = $jadwal->min_pulang;
-        $jadwal_jam_pulang_maksimal = $jadwal->max_pulang;
-
-        if (time() < strtotime($jadwal_jam_pulang_minimal)) {
+        if (time() < strtotime($jadwal->min_pulang)) {
             return response()->json([
-                'message' => 'Minimal Jam Presensi Pulang ' . date("H:i", strtotime($jadwal_jam_pulang_minimal))
+                'message' => 'Minimal Jam Presensi Pulang ' . date("H:i", strtotime($jadwal->min_pulang))
             ]);
         }
 
-        if (time() > strtotime($jadwal_jam_pulang_maksimal)) {
-            return response()->json([
-                'message' => 'Anda melebihi batas maksimal jam Presensi Pulang'
-            ]);
+        if (time() > strtotime($jadwal->max_pulang)) {
+            return response()->json(['message' => 'Anda melebihi batas maksimal jam Presensi Pulang']);
         }
 
-        // 3. Ambil data presensi
-        $data_attendance = AttendancesPegawai::where([
-            ['pegawai_id', $request->user()->id],
-            ['dinas_id', $request->user()->dinas_id],
-            ['date_attendance', date('Y-m-d')]
-        ])->first();
+        // ===== VALIDASI LOKASI =====
+        $dinas = cache()->remember(
+            'dinas_' . $request->user()->dinas_id,
+            3600,
+            fn() => Dinas::find($request->user()->dinas_id)
+        );
 
-        if (!$data_attendance) {
-            return response()->json([
-                'message' => 'Anda tidak presensi masuk dan dianggap tidak masuk kerja'
-            ]);
-        }
-
-        if ($data_attendance->outgoing_time) {
-            return response()->json([
-                'message' => 'Anda sudah presensi pulang'
-            ]);
-        }
-
-        // 4. Validasi lokasi
-        $dinas = Dinas::find($request->user()->dinas_id);
         if (!$dinas || !$dinas->latitude || !$dinas->longitude) {
             return response()->json(['message' => 'Latitude & Longitude Dinas kosong']);
         }
+
         if (!$request->latitude || !$request->longitude) {
             return response()->json(['message' => 'Latitude & Longitude anda kosong']);
         }
 
-        // 5. Update presensi pulang (tanpa foto)
-        DB::beginTransaction();
-        try {
-            $data_attendance->update([
-                'outgoing_time' => now(),
-                'status_pulang' => 'Pulang'
-            ]);
+        // ===== ATOMIC UPDATE =====
+        $updated = AttendancesPegawai::where([
+            ['pegawai_id', $request->user()->id],
+            ['dinas_id', $request->user()->dinas_id],
+            ['date_attendance', today()],
+            ['outgoing_time', null]
+        ])->update([
+            'outgoing_time' => now(),
+            'status_pulang' => 'Pulang'
+        ]);
 
-            DB::commit();
-            return response()->json(['message' => 'Presensi Pulang berhasil','id_absen'  => $data_attendance->id]);
-        } catch (\Throwable $e) {
-            DB::rollBack();
-            return response()->json(['message' => $e->getMessage()]);
+        if ($updated === 0) {
+            return response()->json([
+                'message' => 'Anda belum presensi masuk atau sudah presensi pulang'
+            ]);
         }
+
+        return response()->json([
+            'message' => 'Presensi Pulang berhasil'
+        ]);
     }
+
 
     public function uploadFoto(Request $request)
     {
@@ -626,13 +590,13 @@ class PegawaiController extends Controller
         ]);
 
         $absen = AttendancesPegawai::find($request->id_absen);
-        
+
         if (!$absen) {
             return response()->json(['message' => 'Absen tidak ditemukan'], 404);
         }
 
-        $upload = $this->saveImageNew($request->file('file'), 'presensi_pegawai_upload_tes','temp');
-        
+        $upload = $this->saveImageNew($request->file('file'), 'presensi_pegawai_upload_tes', 'temp');
+
         $path = $upload[0];
         $url = $upload[1];
 
@@ -666,7 +630,7 @@ class PegawaiController extends Controller
 
         return response()->json(['message' => 'Foto berhasil diupload']);
     }
-    
+
     public function persensi(Request $request)
     {
 
@@ -876,19 +840,48 @@ class PegawaiController extends Controller
 
     public function show(string $id)
     {
-        $from = date('Y-m' . '-01');
-        $to = date('Y-m-t');
+        try {
+            // Cache data pegawai
+            $user = Cache::remember("pegawai_{$id}", now()->addMinutes(10), function() use ($id) {
+                return Pegawai::findOrFail($id);
+            });
 
-        $user = Pegawai::where('id', $id)->firstOrFail();
-        $tpp = AttendancesPegawai::where('pegawai_id', $user->id)
-            ->whereBetween('date_attendance', [$from, $to])
-            ->sum('tpp_diterima');
-        $versi = DB::select('select versi from versi');
-        $user->versi = $versi[0]->versi;
-        return response()->json([
-            'message' => 'success',
-            'results' => ['data' => [$user], 'tpp' => "Rp " . number_format($tpp, 2, ',', '.')]
-        ]);
+            // Cache versi aplikasi
+            $versi = Cache::remember('app_version', now()->addMinutes(10), function() {
+                return DB::table('versi')->value('versi');
+            });
+
+            // Menghitung total TPP diterima berdasarkan rentang tanggal bulan ini
+            $from = Carbon::now()->startOfMonth()->toDateString();
+            $to = Carbon::now()->endOfMonth()->toDateString();
+
+            // $tpp = AttendancesPegawai::where('pegawai_id', $user->id)
+            //     ->whereBetween('date_attendance', [$from, $to])
+            //     ->sum('tpp_diterima');
+            $tpp = 0;
+            // Menambahkan versi ke dalam data user
+            $user->versi = $versi;
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Data pegawai berhasil ditemukan',
+                'data' => [
+                    'user' => $user,
+                    'tpp' => "Rp " . number_format($tpp, 2, ',', '.')
+                ]
+            ], 200);
+
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Pegawai tidak ditemukan'
+            ], 404);
+        } catch (Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Terjadi kesalahan. Silakan coba lagi.'
+            ], 500);
+        }
     }
 
     public function block_fake_gps(Request $request)
@@ -934,7 +927,7 @@ class PegawaiController extends Controller
                 )->first();
 
 
-                $upload = $this->saveImageNew($request->file('file'), 'test_persensi_pegawai','temp');
+                $upload = $this->saveImageNew($request->file('file'), 'test_persensi_pegawai', 'temp');
                 return response()->json([
                     'message' => 'test success',
                     'dataa' => $upload
@@ -969,7 +962,7 @@ class PegawaiController extends Controller
         return [$path, $attachment];
     }
 
-    public function saveImageNew($image, $folder,$tempFolder='temp')
+    public function saveImageNew($image, $folder, $tempFolder = 'temp')
     {
 
         // if ($image->getClientOriginalExtension() === 'heic') {
@@ -979,31 +972,31 @@ class PegawaiController extends Controller
 
         //     // Optionally store the file temporarily and get the path
         //     $file = $image->storeAs($tempFolder, $filename, 'public');
-            
+
         //     // Define the final storage path
         //     $path = $folder . '/' . $filename;
-            
+
         //     // Dispatch the job to save the file in the background
         //     SaveFileJob::dispatch($file, $folder, $filename,$tempFolder);
 
         //     return [$path, url('/storage/') . '/' . $path];
         // }
-        
+
         $imageName = auth()->id() . '_' . time() . '.' . $image->getClientOriginalExtension();
         $path = $folder . '/' . $imageName;
         $tempPath = $image->storeAs($tempFolder, $imageName, 'public');
-        
+
         Log::info("Image saved successfully: {$imageName}");
 
-        
-        
+
+
         // if(getimagesize($image)[0] > 4000|| getimagesize($image)[1] > 4000){
         //   ini_set('memory_limit', '-1');
         //   SaveImageJob::dispatchSync($tempPath, $path,$imageName,$tempFolder);
         // }else{
         //     SaveImageJob::dispatch($tempPath, $path,$imageName,$tempFolder);    
         // }
-        
+
         return [$path, url('/storage/') . '/' . $path];
     }
 }
