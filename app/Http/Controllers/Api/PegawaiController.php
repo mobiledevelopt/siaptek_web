@@ -474,7 +474,7 @@ class PegawaiController extends Controller
         // ===== HITUNG JAM =====
         $now = time();
         if ($now < strtotime($jadwal->min_masuk)) {
-            return response()->json(['message' => 'Minimal Jam Presensi ' . $jadwal->min_masuk]);
+            return response()->json(['message' => 'Minimal Jam Presensi ' . date("H:i", strtotime($jadwal->min_masuk))]);
         }
 
         if ($now > strtotime($jadwal->max_masuk)) {
