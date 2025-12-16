@@ -865,7 +865,7 @@ class PegawaiController extends Controller
 
             return response()->json([
                 // 'status' => 'success',
-                'message' => 'Data pegawai berhasil ditemukan',
+                'message' => 'success',
                 'data' => [
                     'user' => $user,
                     'tpp' => "Rp " . number_format($tpp, 2, ',', '.')
