@@ -461,7 +461,7 @@ class PegawaiController extends Controller
         //     3600,
         //     fn() => JamAbsen::find(date('w') <= 4 ? 1 : 2)
         // );
-        
+
         $jadwal = JamAbsen::find(date('w') <= 4 ? 1 : 2);
 
 
@@ -479,6 +479,18 @@ class PegawaiController extends Controller
 
         if ($now > strtotime($jadwal->max_masuk)) {
             return response()->json(['message' => 'Anda melebihi batas maksimal jam masuk']);
+        }
+
+        $alreadyClockedIn = AttendancesPegawai::where(
+            [
+                ['pegawai_id', $request->user()->id],
+                ['date_attendance', date('Y-m-d')],
+                ['dinas_id', $request->user()->dinas_id]
+            ]
+        )->exists();
+
+        if ($alreadyClockedIn) {
+            return response()->json(['message' => 'Anda sudah presensi masuk']);
         }
 
         $total_menit = max(0, floor(($now - strtotime($jadwal->jam_masuk)) / 60));
@@ -645,7 +657,7 @@ class PegawaiController extends Controller
 
         return response()->json([
             'message' => 'success',
-            'data' => []//$data->take(5)->orderBy('date_attendance', 'desc')->get()
+            'data' => [] //$data->take(5)->orderBy('date_attendance', 'desc')->get()
         ]);
     }
 
@@ -846,7 +858,7 @@ class PegawaiController extends Controller
         // dd('a')
         try {
             // Cache data pegawai
-            $user = Cache::remember("pegawai_{$id}", now()->addMinutes(10), function() use ($id) {
+            $user = Cache::remember("pegawai_{$id}", now()->addMinutes(10), function () use ($id) {
                 return Pegawai::findOrFail($id);
             });
 
@@ -871,7 +883,6 @@ class PegawaiController extends Controller
                 'message' => 'success',
                 'results' => ['data' => [$user], 'tpp' => "Rp " . number_format($tpp, 2, ',', '.')]
             ], 200);
-
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
                 'status' => 'error',
