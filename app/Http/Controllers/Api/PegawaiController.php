@@ -456,11 +456,14 @@ class PegawaiController extends Controller
 
         // ===== CACHE KONFIGURASI =====
 
-        $jadwal = cache()->remember(
-            'jam_absen_' . date('w'),
-            3600,
-            fn() => JamAbsen::find(date('w') <= 4 ? 1 : 2)
-        );
+        // $jadwal = cache()->remember(
+        //     'jam_absen_' . date('w'),
+        //     3600,
+        //     fn() => JamAbsen::find(date('w') <= 4 ? 1 : 2)
+        // );
+        
+        $jadwal = JamAbsen::find(date('w') <= 4 ? 1 : 2);
+
 
         $level_telat = cache()->remember(
             'config_pot_tpp',
