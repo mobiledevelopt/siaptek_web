@@ -576,25 +576,46 @@ class PegawaiController extends Controller
         }
 
         // ===== ATOMIC UPDATE =====
-        $updated = AttendancesPegawai::where([
+        $attendance = AttendancesPegawai::where([
             ['pegawai_id', $request->user()->id],
             ['dinas_id', $request->user()->dinas_id],
             ['date_attendance', today()],
             ['outgoing_time', null]
-        ])->update([
-            'outgoing_time' => now(),
-            'status_pulang' => 'Pulang'
-        ]);
+        ])->first();
 
-        if ($updated === 0) {
+        if ($attendance) {
+            // Melakukan update
+            $attendance->outgoing_time = now();
+            $attendance->status_pulang = 'Pulang';
+            $attendance->save();
+
+            return response()->json([
+                'message' => 'Presensi pulang berhasil',
+                'id' => $attendance->id // Mengambil id dari record yang diupdate
+            ]);
+        } else {
             return response()->json([
                 'message' => 'Anda sudah presensi pulang'
             ]);
         }
+        // $updated = AttendancesPegawai::where([
+        //     ['pegawai_id', $request->user()->id],
+        //     ['dinas_id', $request->user()->dinas_id],
+        //     ['date_attendance', today()],
+        //     ['outgoing_time', null]
+        // ])->update([
+        //     'outgoing_time' => now(),
+        //     'status_pulang' => 'Pulang'
+        // ]);
+
+        // if ($updated === 0) {
+        //     return response()->json([
+        //         'message' => 'Anda sudah presensi pulang'
+        //     ]);
+        // }
 
         return response()->json([
-            'message' => 'Presensi Pulang berhasil',
-            'id_absen' => $updated->id
+            'message' => 'Presensi Pulang berhasil'
         ]);
     }
 
