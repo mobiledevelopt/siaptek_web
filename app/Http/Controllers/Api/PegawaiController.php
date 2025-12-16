@@ -591,7 +591,7 @@ class PegawaiController extends Controller
 
             return response()->json([
                 'message' => 'Presensi pulang berhasil',
-                'id' => $attendance->id // Mengambil id dari record yang diupdate
+                'id_absen' => $attendance->id // Mengambil id dari record yang diupdate
             ]);
         } else {
             return response()->json([
