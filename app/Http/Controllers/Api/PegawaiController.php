@@ -593,7 +593,8 @@ class PegawaiController extends Controller
         }
 
         return response()->json([
-            'message' => 'Presensi Pulang berhasil'
+            'message' => 'Presensi Pulang berhasil',
+            'id_absen' => $updated->id
         ]);
     }
 
