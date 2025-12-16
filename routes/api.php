@@ -25,7 +25,7 @@ Route::middleware(['auth:sanctum', 'throttle:siaptek'])->get('/user', function (
     return $request->user();
 });
 
-Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
+Route::middleware(['auth:sanctum', 'throttle:siaptek'])->group(function () {
     Route::post('/logout', [\App\Http\Controllers\Api\AuthController::class, 'logout']);
     
     Route::middleware(['auth:sanctum','throttle:siaptek_post'])->group(function () {
