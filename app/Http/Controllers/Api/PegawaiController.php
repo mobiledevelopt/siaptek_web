@@ -634,15 +634,15 @@ class PegawaiController extends Controller
     public function persensi(Request $request)
     {
 
-        $user = $request->user();
-        $data = AttendancesPegawai::where('pegawai_id', $user->id);
-        if ($request->date != null) {
-            $data->where('date_attendance', $request->date);
-        }
+        // $user = $request->user();
+        // $data = AttendancesPegawai::where('pegawai_id', $user->id);
+        // if ($request->date != null) {
+        //     $data->where('date_attendance', $request->date);
+        // }
 
         return response()->json([
             'message' => 'success',
-            'data' => $data->take(5)->orderBy('date_attendance', 'desc')->get()
+            'data' => []//$data->take(5)->orderBy('date_attendance', 'desc')->get()
         ]);
     }
 
