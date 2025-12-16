@@ -840,49 +840,62 @@ class PegawaiController extends Controller
 
     public function show(string $id)
     {
-        // dd('a')
-        try {
-            // Cache data pegawai
-            $user = Cache::remember("pegawai_{$id}", now()->addMinutes(10), function() use ($id) {
-                return Pegawai::findOrFail($id);
-            });
+        // // dd('a')
+        // try {
+        //     // Cache data pegawai
+        //     $user = Cache::remember("pegawai_{$id}", now()->addMinutes(10), function() use ($id) {
+        //         return Pegawai::findOrFail($id);
+        //     });
 
-            // // Cache versi aplikasi
-            // $versi = Cache::remember('app_version', now()->addMinutes(10), function() {
-            //     return DB::table('versi')->value('versi');
-            // });
+        //     // // Cache versi aplikasi
+        //     // $versi = Cache::remember('app_version', now()->addMinutes(10), function() {
+        //     //     return DB::table('versi')->value('versi');
+        //     // });
 
-            // Menghitung total TPP diterima berdasarkan rentang tanggal bulan ini
-            $from = Carbon::now()->startOfMonth()->toDateString();
-            $to = Carbon::now()->endOfMonth()->toDateString();
+        //     // Menghitung total TPP diterima berdasarkan rentang tanggal bulan ini
+        //     $from = Carbon::now()->startOfMonth()->toDateString();
+        //     $to = Carbon::now()->endOfMonth()->toDateString();
 
-            // $tpp = AttendancesPegawai::where('pegawai_id', $user->id)
-            //     ->whereBetween('date_attendance', [$from, $to])
-            //     ->sum('tpp_diterima');
-            $tpp = 0;
-            // Menambahkan versi ke dalam data user
-            $user->versi = '1.0.2-dev';
+        //     // $tpp = AttendancesPegawai::where('pegawai_id', $user->id)
+        //     //     ->whereBetween('date_attendance', [$from, $to])
+        //     //     ->sum('tpp_diterima');
+        //     $tpp = 0;
+        //     // Menambahkan versi ke dalam data user
+        //     $user->versi = '1.0.2-dev';
 
-            return response()->json([
-                // 'status' => 'success',
-                'message' => 'Data pegawai berhasil ditemukan',
-                'data' => [
-                    'user' => $user,
-                    'tpp' => "Rp " . number_format($tpp, 2, ',', '.')
-                ]
-            ], 200);
+        //     return response()->json([
+        //         // 'status' => 'success',
+        //         'message' => 'Data pegawai berhasil ditemukan',
+        //         'data' => [
+        //             'user' => $user,
+        //             'tpp' => "Rp " . number_format($tpp, 2, ',', '.')
+        //         ]
+        //     ], 200);
 
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Pegawai tidak ditemukan'
-            ], 404);
-        } catch (Exception $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Terjadi kesalahan. Silakan coba lagi.'
-            ], 500);
-        }
+        // } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        //     return response()->json([
+        //         'status' => 'error',
+        //         'message' => 'Pegawai tidak ditemukan'
+        //     ], 404);
+        // } catch (Exception $e) {
+        //     return response()->json([
+        //         'status' => 'error',
+        //         'message' => 'Terjadi kesalahan. Silakan coba lagi.'
+        //     ], 500);
+        // }
+        $from = date('Y-m' . '-01');
+        $to = date('Y-m-t');
+
+        $user = Pegawai::where('id', $id)->firstOrFail();
+        $tpp = AttendancesPegawai::where('pegawai_id', $user->id)
+            ->whereBetween('date_attendance', [$from, $to])
+            ->sum('tpp_diterima');
+        $versi = DB::select('select versi from versi');
+        $user->versi = $versi[0]->versi;
+        return response()->json([
+            'message' => 'success',
+            'results' => ['data' => [$user], 'tpp' => "Rp " . number_format($tpp, 2, ',', '.')]
+        ]);
     }
 
     public function block_fake_gps(Request $request)
