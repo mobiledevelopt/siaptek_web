@@ -843,10 +843,10 @@ class PegawaiController extends Controller
         // dd('a')
         try {
             // Cache data pegawai
-            // $user = Cache::remember("pegawai_{$id}", now()->addMinutes(10), function() use ($id) {
-            //     return Pegawai::findOrFail($id);
-            // });
-            $user = Pegawai::findOrFail($id);
+            $user = Cache::remember("pegawai_{$id}", now()->addMinutes(10), function() use ($id) {
+                return Pegawai::findOrFail($id);
+            });
+
             // // Cache versi aplikasi
             // $versi = Cache::remember('app_version', now()->addMinutes(10), function() {
             //     return DB::table('versi')->value('versi');
