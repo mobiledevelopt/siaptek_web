@@ -864,7 +864,7 @@ class PegawaiController extends Controller
             $user->versi = '1.0.2-dev';
 
             return response()->json([
-                'status' => 'success',
+                // 'status' => 'success',
                 'message' => 'Data pegawai berhasil ditemukan',
                 'data' => [
                     'user' => $user,
