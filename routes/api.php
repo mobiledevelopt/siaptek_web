@@ -51,7 +51,7 @@ Route::middleware(['auth:sanctum', 'throttle:siaptek'])->group(function () {
     Route::apiResource('/marriage', \App\Http\Controllers\Api\MarriageController::class);
     Route::apiResource('/pangkat', \App\Http\Controllers\Api\PangkatGolController::class);
     Route::apiResource('/jenjang', \App\Http\Controllers\Api\JenjangController::class);
-    Route::apiResource('/dinas', \App\Http\Controllers\Api\DinasController::class)->middleware('throttle:21,1');
+    Route::apiResource('/dinas', \App\Http\Controllers\Api\DinasController::class);
     Route::apiResource('/pengumuman', \App\Http\Controllers\Api\PengumumanController::class);
     Route::post('/izinUpdate', [\App\Http\Controllers\Api\IzinController::class, 'updateIzin']);
     Route::apiResource('/izin', \App\Http\Controllers\Api\IzinController::class);
