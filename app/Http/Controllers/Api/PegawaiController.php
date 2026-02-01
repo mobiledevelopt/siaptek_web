@@ -447,7 +447,7 @@ class PegawaiController extends Controller
     {
         // ===== VALIDASI AWAL (CEPAT) =====
         if (in_array(date('w'), [0, 6])) {
-            return response()->json(['message' => 'Hari Libur Presensi']);
+            return response()->json(['message' => 'Tidak ada jadwal presensi hari ini']);
         }
 
         if (KalendarLibur::whereDate('tgl', today())->exists()) {
@@ -466,11 +466,12 @@ class PegawaiController extends Controller
 
 
         $level_telat = cache()->remember(
-            'config_pot_tpp',
+            'config_pot_tpp_masuk',
             3600,
-            fn() => ConfigPotTpp::all()
+            fn() => ConfigPotTpp::whereIn('id', [1, 2, 3, 4])->get()
         );
 
+        // dd($level_telat);
         // ===== HITUNG JAM =====
         $now = time();
         if ($now < strtotime($jadwal->min_masuk)) {
@@ -497,14 +498,37 @@ class PegawaiController extends Controller
 
         $status_masuk = 'Masuk';
         $persen_potong = 0;
+        $ConfigPotTpp_id = null;
 
         foreach ($level_telat as $level) {
             if ($total_menit >= $level->dari_meni && $total_menit <= $level->sampai_menit) {
                 $status_masuk = $level->title;
                 $persen_potong = $level->persentase_potongan;
+                $ConfigPotTpp_id = $level->id;
                 break;
             }
         }
+
+        // ===== HITUNG tunjangan harian =====
+        $jml_hari_kerja = Jml_hari_kerja::where([
+            'bulan' => date('m'),
+            'tahun' => date('Y')
+        ])->first();
+
+        if (!$jml_hari_kerja) {
+            return response()->json([
+                'message' => 'Data jumlah hari kerja bulan ini belum di-set'
+            ]);
+        }
+
+        $tunjangan_per_hari = $request->user()->tpp / $jml_hari_kerja->jml_hari_kerja;
+
+        // total potongan mengikuti logika lama:
+        // potongan = (40% * persentase telat)
+        $total_potongan_tpp = ($tunjangan_per_hari * 40 / 100) * ($persen_potong / 100);
+
+        $tpp_diterima = $tunjangan_per_hari - $total_potongan_tpp;
+
 
         // ===== ATOMIC INSERT (SUPER CEPAT) =====
         try {
@@ -513,6 +537,13 @@ class PegawaiController extends Controller
                 'dinas_id' => $request->user()->dinas_id,
                 'date_attendance' => today(),
                 'incoming_time' => now(),
+                'tunjangan_per_hari' => $tunjangan_per_hari,
+                'menit_telat_masuk' => $total_menit,
+                'total_potongan_tpp' => $total_potongan_tpp,
+                'potongan_absen_masuk' => $total_potongan_tpp,
+                'potongan_absen_masuk_persen' => $persen_potong,
+                'tpp_diterima' => $tpp_diterima,
+                'ConfigPotTpp_id' => $ConfigPotTpp_id,
                 'status' => 'Masuk',
                 'menit_telat_masuk' => $total_menit,
                 'status_masuk' => $status_masuk
@@ -534,7 +565,7 @@ class PegawaiController extends Controller
     {
         // ===== VALIDASI HARI =====
         if (in_array(date('w'), [0, 6])) {
-            return response()->json(['message' => 'Hari Libur Presensi']);
+            return response()->json(['message' => 'Tidak ada jadwal presensi hari ini']);
         }
 
         if (KalendarLibur::whereDate('tgl', today())->exists()) {
@@ -567,13 +598,13 @@ class PegawaiController extends Controller
             fn() => Dinas::find($request->user()->dinas_id)
         );
 
-        if (!$dinas || !$dinas->latitude || !$dinas->longitude) {
-            return response()->json(['message' => 'Latitude & Longitude Dinas kosong']);
-        }
+        // if (!$dinas || !$dinas->latitude || !$dinas->longitude) {
+        //     return response()->json(['message' => 'Latitude & Longitude Dinas kosong']);
+        // }
 
-        if (!$request->latitude || !$request->longitude) {
-            return response()->json(['message' => 'Latitude & Longitude anda kosong']);
-        }
+        // if (!$request->latitude || !$request->longitude) {
+        //     return response()->json(['message' => 'Latitude & Longitude anda kosong']);
+        // }
 
         // ===== ATOMIC UPDATE =====
         $attendance = AttendancesPegawai::where([
@@ -595,9 +626,10 @@ class PegawaiController extends Controller
             ]);
         } else {
             return response()->json([
-                'message' => 'Anda sudah presensi pulang'
+                'message' => 'Anda belum melakukan presensi masuk'
             ]);
         }
+
         // $updated = AttendancesPegawai::where([
         //     ['pegawai_id', $request->user()->id],
         //     ['dinas_id', $request->user()->dinas_id],
@@ -706,6 +738,55 @@ class PegawaiController extends Controller
 
         $d = 2 * $R * asin(sqrt(sin($difflat / 2) * sin($difflat / 2) + cos($rlat1) * cos($rlat2) * sin($difflon / 2) * sin($difflon / 2)));
         return round($d * 1000);
+    }
+
+    function sync(Request $request)
+    {
+
+        $id = $request->id;
+        try {
+            // Cache data pegawai
+            $user = Cache::remember("pegawai_{$id}", now()->addMinutes(10), function () use ($id) {
+                return Pegawai::findOrFail($id);
+            });
+
+            // // Cache versi aplikasi
+            $versi = Cache::remember('app_version', now()->addMinutes(10), function () {
+                return DB::table('versi')->value('versi');
+            });
+
+            // Menghitung total TPP diterima berdasarkan rentang tanggal bulan ini
+            $from = Carbon::now()->startOfMonth()->toDateString();
+            $to = Carbon::now()->endOfMonth()->toDateString();
+            $tpp = 0;
+            $tpp = AttendancesPegawai::where('pegawai_id', $user->id)
+                ->whereBetween('date_attendance', [$from, $to])
+                ->sum('tpp_diterima');
+
+            // Menambahkan versi ke dalam data user
+            $user->versi = '1.0.2-dev';
+
+            $jam = JamAbsen::orderBy('id', 'ASC')->get()->map(function ($dat) {
+                $dat->jam_masuk = date('H:i', strtotime($dat->jam_masuk));
+                $dat->jam_pulang = date('H:i', strtotime($dat->jam_pulang));
+                return $dat;
+            });
+
+            return response()->json([
+                'message' => 'success',
+                'results' => ['data' => [$user], 'tpp' => "Rp " . number_format($tpp, 2, ',', '.'), 'jam' => $jam]
+            ], 200);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Pegawai tidak ditemukan'
+            ], 404);
+        } catch (Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Terjadi kesalahan. Silakan coba lagi.'
+            ], 500);
+        }
     }
 
     function update_pp(Request $request)

@@ -63,7 +63,7 @@ class DaftarHadirApelController extends Controller
         // ], [
         //     'required' => ':attribute harus terisi.',
         // ]);
-        
+
         // $validator = Validator::make($request->all(), [
         //     'file' => 'required|max:10000',
         // ], [
@@ -98,7 +98,7 @@ class DaftarHadirApelController extends Controller
                 'message' => 'Hari Ini Libur Apel',
             ]);
         }
-        
+
         // cek batas apel pagi
         if (time() < strtotime('12:00')) {
             if ($jadwal_apel->apel_pagi != 1) {
@@ -147,7 +147,7 @@ class DaftarHadirApelController extends Controller
                 'message' => 'Anda Belum Melakukan Presensi Pagi'
             ]);
         }
-        
+
         if (time() < strtotime('12:00')) {
             // cek presensi apel pagi
             if ($presensi_apel !== null && $presensi_apel->status_apel_pagi !== null && trim($presensi_apel->status_apel_pagi) !== '') {
@@ -176,7 +176,7 @@ class DaftarHadirApelController extends Controller
             // }
 
             if (time() < strtotime('12:00')) {
-               $absen = AttendancesPegawai::updateOrCreate(
+                $absen = AttendancesPegawai::updateOrCreate(
                     [
                         'pegawai_id' => $request->user()->id,
                         'dinas_id' => $request->user()->dinas_id,
@@ -196,7 +196,7 @@ class DaftarHadirApelController extends Controller
                 );
                 $message = 'Presensi Apel Pagi Berhasil';
             } else {
-               $absen = AttendancesPegawai::updateOrCreate(
+                $absen = AttendancesPegawai::updateOrCreate(
                     [
                         'pegawai_id' => $request->user()->id,
                         'dinas_id' => $request->user()->dinas_id,
@@ -216,6 +216,198 @@ class DaftarHadirApelController extends Controller
                 );
                 $message = 'Presensi Apel Sore Berhasil';
             }
+
+            DB::commit();
+            return response()->json([
+                'message' => $message,
+                'id_absen'  => $absen->id
+            ]);
+        } catch (\Throwable $throw) {
+            DB::rollBack();
+            $response = response()->json(['error' => $throw->getMessage()]);
+            return response()->json([
+                'message' => $response
+            ]);
+        }
+    }
+
+    public function apel_pagi(Request $request)
+    {
+
+        $code = 400;
+        $response = [
+            'message' => 'Data tidak lengkap',
+            'data' => []
+        ];
+
+        // cek jadwal apel pagi / sore
+        $jadwal_apel = JadwalApel::where(['dinas_id' => $request->user()->dinas_id, 'hari' => date('w')])->first();
+
+        if ($jadwal_apel->apel_pagi != 1) {
+            return response()->json([
+                'message' => 'Tidak ada jadwal apel pagi hari ini' . "\n",
+            ]);
+        }
+
+        $hari_libur = KalendarLibur::where('tgl', date('Y-m-d'))->first();
+
+        if ($hari_libur != null) {
+            return response()->json([
+                'message' => 'Hari Ini Libur Apel',
+            ]);
+        }
+
+        // cek batas apel pagi
+        if ($jadwal_apel->apel_pagi == 1 && time() < strtotime($jadwal_apel->jam_apel_pagi)) {
+            return response()->json([
+                'message' => 'Minimal Jam Apel ' . date("H:i", strtotime($jadwal_apel->jam_apel_pagi)) . "\n",
+            ]);
+        }
+        if ($jadwal_apel->apel_pagi == 1 && time() > strtotime($jadwal_apel->max_apel_pagi)) {
+            return response()->json([
+                'message' => 'Anda melebihi batas maksimal jam apel pagi' . "\n",
+            ]);
+        }
+
+        // cek presensi apel
+        $presensi_apel = AttendancesPegawai::where([
+            'pegawai_id' => $request->user()->id,
+            'dinas_id' => $request->user()->dinas_id,
+            'date_attendance'     => date('Y-m-d')
+        ])->first();
+
+        if ($presensi_apel === null) {
+            return response()->json([
+                'message' => 'Anda Belum Melakukan Presensi Masuk'
+            ]);
+        }
+
+        // cek presensi apel pagi
+        if ($presensi_apel !== null && $presensi_apel->status_apel_pagi !== null && trim($presensi_apel->status_apel_pagi) !== '') {
+            return response()->json([
+                'message' => 'Anda Sudah Presensi Apel Pagi'
+            ]);
+        }
+
+
+        DB::beginTransaction();
+        try {
+            $absen = AttendancesPegawai::updateOrCreate(
+                [
+                    'pegawai_id' => $request->user()->id,
+                    'dinas_id' => $request->user()->dinas_id,
+                    'date_attendance' => date('Y-m-d')
+                ],
+                [
+                    'dinas_id' => $request->user()->dinas_id,
+                    'status_apel' => "Hadir",
+                    'potongan_tidak_apel' => 0,
+                    'potongan_tidak_apel_persen' => 0,
+                    'status_apel_pagi' => "Hadir",
+                    'potongan_tidak_apel_pagi' => 0,
+                    'potongan_tidak_apel_pagi_persen' => 0,
+                    // 'foto_apel_pagi_path' => $path,
+                    // 'foto_apel_pagi' => $attachment
+                ]
+            );
+            $message = 'Presensi Apel Pagi Berhasil';
+
+            DB::commit();
+            return response()->json([
+                'message' => $message,
+                'id_absen'  => $absen->id
+            ]);
+        } catch (\Throwable $throw) {
+            DB::rollBack();
+            $response = response()->json(['error' => $throw->getMessage()]);
+            return response()->json([
+                'message' => $response
+            ]);
+        }
+    }
+
+    public function apel_sore(Request $request)
+    {
+
+        $code = 400;
+        $response = [
+            'message' => 'Data tidak lengkap',
+            'data' => []
+        ];
+
+        // cek jadwal apel pagi / sore
+        $jadwal_apel = JadwalApel::where(['dinas_id' => $request->user()->dinas_id, 'hari' => date('w')])->first();
+
+        if ($jadwal_apel->apel_sore != 1) {
+            return response()->json([
+                'message' => 'Tidak ada jadwal apel sore hari ini' . "\n",
+            ]);
+        }
+
+        $hari_libur = KalendarLibur::where('tgl', date('Y-m-d'))->first();
+
+        if ($hari_libur != null) {
+            return response()->json([
+                'message' => 'Hari Ini Libur Apel',
+            ]);
+        }
+
+        // cek batas apel sore
+        if ($jadwal_apel->apel_sore == 1 && time() < strtotime($jadwal_apel->jam_apel_sore)) {
+            return response()->json([
+                'message' => 'Minimal Jam Apel Sore' . date("H:i", strtotime($jadwal_apel->jam_apel_sore)) . "\n",
+            ]);
+        }
+        if ($jadwal_apel->apel_sore == 1 && time() > strtotime($jadwal_apel->max_apel_sore)) {
+            return response()->json([
+                'message' => 'Anda melebihi batas maksimal jam apel sore' . "\n",
+            ]);
+        }
+
+        // cek presensi apel
+        $presensi_apel = AttendancesPegawai::where([
+            'pegawai_id' => $request->user()->id,
+            'dinas_id' => $request->user()->dinas_id,
+            'date_attendance'     => date('Y-m-d')
+        ])->first();
+
+        if ($presensi_apel === null) {
+            return response()->json([
+                'message' => 'Anda Belum Melakukan Presensi Masuk'
+            ]);
+        }
+
+        // cek presensi apel sore
+        if ($presensi_apel !== null && $presensi_apel->status_apel_sore !== null && trim($presensi_apel->status_apel_sore !== '')) {
+            return response()->json([
+                'message' => 'Anda Sudah Presensi Apel Sore'
+            ]);
+        }
+
+        DB::beginTransaction();
+        try {
+
+
+            $absen = AttendancesPegawai::updateOrCreate(
+                [
+                    'pegawai_id' => $request->user()->id,
+                    'dinas_id' => $request->user()->dinas_id,
+                    'date_attendance' => date('Y-m-d')
+                ],
+                [
+                    'dinas_id' => $request->user()->dinas_id,
+                    'status_apel' => "Hadir",
+                    'potongan_tidak_apel' => 0,
+                    'potongan_tidak_apel_persen' => 0,
+                    'status_apel_sore' => "Hadir",
+                    'potongan_tidak_apel_sore' => 0,
+                    'potongan_tidak_apel_sore_persen' => 0,
+                    // 'foto_apel_sore_path' => $path,
+                    // 'foto_apel_sore' => $attachment
+                ]
+            );
+            $message = 'Presensi Apel Sore Berhasil';
+
 
             DB::commit();
             return response()->json([
@@ -264,8 +456,8 @@ class DaftarHadirApelController extends Controller
 
         //
     }
-    
-    public function saveImageNew($image, $folder,$tempFolder='temp')
+
+    public function saveImageNew($image, $folder, $tempFolder = 'temp')
     {
 
         // if ($image->getClientOriginalExtension() === 'heic') {
@@ -275,10 +467,10 @@ class DaftarHadirApelController extends Controller
 
         //     // Optionally store the file temporarily and get the path
         //     $file = $image->storeAs($tempFolder, $filename, 'public');
-            
+
         //     // Define the final storage path
         //     $path = $folder . '/' . $filename;
-            
+
         //     // Dispatch the job to save the file in the background
         //     SaveFileJob::dispatch($file, $folder, $filename,$tempFolder);
 
@@ -288,15 +480,14 @@ class DaftarHadirApelController extends Controller
         $imageName = auth()->id() . '_' . time() . '.' . $image->getClientOriginalExtension();
         $path = $folder . '/' . $imageName;
         $tempPath = $image->storeAs($tempFolder, $imageName, 'public');
-        
+
         // if(getimagesize($image)[0] > 4000|| getimagesize($image)[1] > 4000){
         //   ini_set('memory_limit', '-1');
         //   SaveImageJob::dispatchSync($tempPath, $path,$imageName,$tempFolder);
         // }else{
         //     SaveImageJob::dispatch($tempPath, $path,$imageName,$tempFolder);    
         // }
-        
+
         return [$path, url('/storage/') . '/' . $path];
     }
-    
 }

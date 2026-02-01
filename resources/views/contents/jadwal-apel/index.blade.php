@@ -23,6 +23,8 @@
                                 <th>Maksimal Jam Apel Sore</th>
                                 <th>Latitude</th>
                                 <th>Longitude</th>
+                                <th>Latitude 2</th>
+                                <th>Longitude 2</th>
                                 <th>Action</th>
                             </tr>
                         </thead>
@@ -165,6 +167,14 @@
                     name: 'longitude',
                 },
                 {
+                    data: 'latitude_2',
+                    name: 'latitude_2',
+                },
+                {
+                    data: 'longitude_2',
+                    name: 'longitude_2',
+                },
+                {
                     data: 'action',
                     name: 'action',
                     orderable: false,
@@ -187,7 +197,7 @@
                             $(rows)
                                 .eq(i)
                                 .before(
-                                    '<tr class="group" style="background-color: #c9d2ff !important"><td colspan="10">' +
+                                    '<tr class="group" style="background-color: #c9d2ff !important"><td colspan="12">' +
                                     group +
                                     '</td></tr>'
                                 );

@@ -181,7 +181,9 @@ class JadwalApelController extends Controller
                     'max_apel_pagi' => $request->max_apel_pagi,
                     'max_apel_sore' => $request->max_apel_sore,
                     'latitude' => $request->latitude,
-                    'longitude' => $request->longitude
+                    'longitude' => $request->longitude,
+                    'latitude_2' => $request->latitude_2,
+                    'longitude_2' => $request->longitude_2,
                 ]);
                 DB::commit();
                 $response = response()->json($this->responseStore(true, NULL, route('jadwal-apel.index')));

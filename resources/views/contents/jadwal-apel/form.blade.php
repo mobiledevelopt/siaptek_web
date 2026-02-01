@@ -78,6 +78,14 @@
                             <label class="form-label mb-0">Longitude</label>
                             <input type="text" value="{{ @$data['longitude']}}" name="longitude" class="form-control" autocomplete="off" />
                         </div>
+                        <div class="form-group mb-4">
+                            <label class="form-label mb-0">Latitude 2</label>
+                            <input type="text" value="{{ @$data['latitude_2']}}" name="latitude_2" class="form-control" autocomplete="off" />
+                        </div>
+                        <div class="form-group mb-4">
+                            <label class="form-label mb-0">Longitude 2</label>
+                            <input type="text" value="{{ @$data['longitude_2']}}" name="longitude_2" class="form-control" autocomplete="off" />
+                        </div>
                         <div class="form-group text-end">
                             <button type="submit" class="btn btn-primary">Submit</button>
                         </div>

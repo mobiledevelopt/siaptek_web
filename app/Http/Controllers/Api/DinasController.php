@@ -57,6 +57,88 @@ class DinasController extends Controller
      */
     public function show(Request $request, Dinas $dina)
     {
+        // Radius
+        $range = Radius::where('id', 1)->first()->nilai;
+
+        // KUMPULKAN LOKASI DINAS
+        $rawLocations = [
+            [
+                'lat' => $dina->latitude,
+                'lng' => $dina->longitude,
+                'label' => 'Lokasi 1'
+            ],
+            [
+                'lat' => $dina->latitude_2,
+                'lng' => $dina->longitude_2,
+                'label' => 'Lokasi 2'
+            ]
+        ];
+
+        // FILTER LOKASI VALID (tidak null & tidak 0)
+        $locations = array_filter($rawLocations, function ($loc) {
+            return !is_null($loc['lat']) &&
+                !is_null($loc['lng']) &&
+                $loc['lat'] != 0 &&
+                $loc['lng'] != 0;
+        });
+
+        // Jika semua lokasi tidak valid → tolak presensi
+        if (count($locations) == 0) {
+            return response()->json([
+                'message' => 'Lokasi presensi belum diset',
+                'izin_presensi' => false
+            ], 400);
+        }
+
+        $latUser = $request->latitude;
+        $lngUser = $request->longitude;
+
+        $distances = [];
+        $insideRange = false;
+
+        foreach ($locations as $loc) {
+
+            $distance = $this->cek_range(
+                $loc['lat'],
+                $loc['lng'],
+                $latUser,
+                $lngUser
+            );
+
+            $distances[] = [
+                'lokasi' => $loc['label'],
+                'distance' => $distance,
+                'in_range' => $distance <= $range
+            ];
+
+            if ($distance <= $range) {
+                $insideRange = true;
+            }
+        }
+
+        if (!$insideRange) {
+            DB::table('log_langlong')->insert([
+                'id_teacher'  => $request->user()->id,
+                'nama_teacher' => $request->user()->name,
+                'latitude'     => $latUser,
+                'longitude'    => $lngUser,
+                'lat_school'   => $dina->latitude,
+                'long_school'  => $dina->longitude,
+                'radius'       => $distances[0]['distance'] ?? null
+            ]);
+        }
+
+        return response()->json([
+            'message' => 'success',
+            'range' => $insideRange, // true = boleh presensi
+            'f' => collect($distances)->min('distance'),
+            'jarak_semua_lokasi' => $distances,
+            'data' => [$dina]
+        ]);
+    }
+
+    public function showOld(Request $request, Dinas $dina)
+    {
 
         $range = Radius::where('id', 1)->first()->nilai;
 
@@ -83,6 +165,33 @@ class DinasController extends Controller
                 $range,
             'range' => $this->cek_range($dina->latitude, $dina->longitude, $request->latitude, $request->longitude) > $range  ? false : true,
         ]);
+    }
+
+    public function cek_range_new($lat1, $lon1, $lat2, $lon2)
+    {
+        // Radius bumi dalam meter
+        $earthRadius = 6371000;
+
+        // Ubah derajat ke radian
+        $lat1 = deg2rad($lat1);
+        $lon1 = deg2rad($lon1);
+        $lat2 = deg2rad($lat2);
+        $lon2 = deg2rad($lon2);
+
+        // Haversine formula
+        $latDiff = $lat2 - $lat1;
+        $lonDiff = $lon2 - $lon1;
+
+        $a = sin($latDiff / 2) * sin($latDiff / 2)
+            + cos($lat1) * cos($lat2)
+            * sin($lonDiff / 2) * sin($lonDiff / 2);
+
+        $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
+
+        // Jarak dalam meter
+        $distance = $earthRadius * $c;
+
+        return $distance;
     }
 
     function cek_range($lat, $lang, $lat_, $lang_)

@@ -19,7 +19,9 @@ class JadwalApel extends Model
         'jam_apel_sore',
         'max_apel_sore',
         'latitude',
-        'longitude'
+        'longitude',
+        'latitude_2',
+        'longitude_2'
     ];
 
     public function dinas()

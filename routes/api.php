@@ -35,6 +35,9 @@ Route::middleware(['auth:sanctum', 'throttle:siaptek'])->group(function () {
         Route::post('/checkin', [\App\Http\Controllers\Api\PegawaiController::class, 'clock_in']);
         Route::post('/checkout', [\App\Http\Controllers\Api\PegawaiController::class, 'clock_out']);
         Route::apiResource('/daftar_hadir_apel', \App\Http\Controllers\Api\DaftarHadirApelController::class);
+        Route::post('/apelpagi', [\App\Http\Controllers\Api\DaftarHadirApelController::class, 'apel_pagi']);
+        Route::post('/apelsore', [\App\Http\Controllers\Api\DaftarHadirApelController::class, 'apel_sore']);
+
         Route::post('/checkinnew', [\App\Http\Controllers\Api\PegawaiController::class, 'clock_in_new']);
         Route::post('/checkoutnew', [\App\Http\Controllers\Api\PegawaiController::class, 'clock_out_new']);
         Route::post('/upload_foto_absen', [\App\Http\Controllers\Api\PegawaiController::class, 'uploadFoto']);
@@ -48,7 +51,7 @@ Route::middleware(['auth:sanctum', 'throttle:siaptek'])->group(function () {
     Route::apiResource('/marriage', \App\Http\Controllers\Api\MarriageController::class);
     Route::apiResource('/pangkat', \App\Http\Controllers\Api\PangkatGolController::class);
     Route::apiResource('/jenjang', \App\Http\Controllers\Api\JenjangController::class);
-    Route::apiResource('/dinas', \App\Http\Controllers\Api\DinasController::class);
+    Route::apiResource('/dinas', \App\Http\Controllers\Api\DinasController::class)->middleware('throttle:21,1');
     Route::apiResource('/pengumuman', \App\Http\Controllers\Api\PengumumanController::class);
     Route::post('/izinUpdate', [\App\Http\Controllers\Api\IzinController::class, 'updateIzin']);
     Route::apiResource('/izin', \App\Http\Controllers\Api\IzinController::class);
@@ -58,6 +61,7 @@ Route::middleware(['auth:sanctum', 'throttle:siaptek'])->group(function () {
     Route::apiResource('/teacher', \App\Http\Controllers\Api\PegawaiController::class);
     Route::apiResource('/jam_absen', \App\Http\Controllers\Api\JamAbsenController::class);
     Route::apiResource('/apel', \App\Http\Controllers\Api\ApelController::class);
+    Route::get('/sync', [\App\Http\Controllers\Api\PegawaiController::class, 'sync']);
     Route::post('/updatePP', [\App\Http\Controllers\Api\PegawaiController::class, 'update_pp']);
     Route::post('/updatePW', [\App\Http\Controllers\Api\PegawaiController::class, 'update_pw']);
     Route::post('/blockFakeGps', [\App\Http\Controllers\Api\PegawaiController::class, 'block_fake_gps']);

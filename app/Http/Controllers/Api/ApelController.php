@@ -20,6 +20,90 @@ class ApelController extends Controller
      */
     public function index(Request $request)
     {
+        // dd(date('w'));
+        $data = JadwalApel::where('hari', '=', date('w'))->where('dinas_id', $request->user()->dinas_id);
+        $radius = Radius::where('id', 2)->first()->nilai;
+        $result = $data->get();
+        $result_object = $data->first();
+        
+
+        if ($result->isEmpty()) {
+            return response()->json([
+                'message' => 'success',
+                'range' => false, // true = boleh presensi
+                'f' => '10.000',
+                'data' => $result
+            ], 200);
+        }
+
+        $rawLocations = [
+            [
+                'lat' => $result_object->latitude,
+                'lng' => $result_object->longitude,
+                'label' => 'Lokasi 1'
+            ],
+            [
+                'lat' => $result_object->latitude_2,
+                'lng' => $result_object->longitude_2,
+                'label' => 'Lokasi 2'
+            ]
+        ];
+
+        // FILTER LOKASI VALID (tidak null & tidak 0)
+        $locations = array_filter($rawLocations, function ($loc) {
+            return !is_null($loc['lat']) &&
+                !is_null($loc['lng']) &&
+                $loc['lat'] != 0 &&
+                $loc['lng'] != 0;
+        });
+
+        // Jika semua lokasi tidak valid → tolak presensi
+        if (count($locations) == 0) {
+            return response()->json([
+                'message' => 'Lokasi apel belum diset',
+                'izin_presensi' => false
+            ], 400);
+        }
+
+        $latUser = $request->latitude;
+        $lngUser = $request->longitude;
+
+        $distances = [];
+        $insideRange = false;
+
+        foreach ($locations as $loc) {
+            $distance = $this->cek_range(
+                $loc['lat'],
+                $loc['lng'],
+                $latUser,
+                $lngUser
+            );
+
+            $distances[] = [
+                'lokasi' => $loc['label'],
+                'distance' => $distance,
+                'in_range' => $distance <= $radius
+            ];
+
+            if ($distance <= $radius) {
+                $insideRange = true;
+            }
+        }
+
+        // $radius_apel = $this->cek_range($result_object->latitude ?? null, $result_object->longitude ?? null, $request->latitude, $request->longitude);
+
+        // unset($request, $dinas);
+        return response()->json([
+            'message' => 'success',
+            'range' => $insideRange, // true = boleh presensi
+            'f' => collect($distances)->min('distance'),
+            'jarak_semua_lokasi' => $distances,
+            'data' => $result
+        ]);
+    }
+
+    public function indexOLD(Request $request)
+    {
         $data = Apel::whereDate('tgl', '=', date('Y-m-d'));
 
         if ($request->has('filter')) {
@@ -37,15 +121,6 @@ class ApelController extends Controller
                 $result_object = $data->first();
             } else {
                 $data = JadwalApel::where('hari', '=', date('w'))->where('dinas_id', $request->user()->dinas_id);
-                // dd(date('H:m') >= $data->max_jam_apel_pagi);
-                // $data = Apel::whereDate('tgl', '=', date('Y-m-d'));
-                // $dinas_ = $request->user()->dinas_id;
-                // $data->whereHas(
-                //     'peserta_dinas',
-                //     function ($q) use ($dinas_) {
-                //         $q->where('dinas_id', $dinas_);
-                //     }
-                // );
                 $result = $data->get();
                 $result_object = $data->first();
             }
@@ -82,9 +157,7 @@ class ApelController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Request $request, JenjangPendidikan $jenjangPendidikan)
-    {
-    }
+    public function show(Request $request, JenjangPendidikan $jenjangPendidikan) {}
 
     /**
      * Show the form for editing the specified resource.
