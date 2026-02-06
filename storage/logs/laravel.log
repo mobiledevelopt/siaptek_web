@@ -10396,3 +10396,7 @@ Did you mean one of these?
 "} 
 [2026-02-02 01:54:10] local.INFO: Image saved successfully: 1212321_1769972050.jpg  
 [2026-02-02 01:54:26] local.INFO: Image saved successfully: 1212321_1769972066.jpg  
+[2026-02-02 21:04:33] local.INFO: Image saved successfully: 1212321_1770041073.jpg  
+[2026-02-05 00:03:29] local.INFO: Image saved successfully: 1212321_1770224609.jpg  
+[2026-02-05 00:09:18] local.INFO: app:move-compress-image RUN CRON  
+[2026-02-05 00:09:18] local.INFO: attendances count1  
