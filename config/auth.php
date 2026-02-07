@@ -41,7 +41,7 @@ return [
             'provider' => 'users',
         ],
         'pegawai' => [
-            'driver' => 'session',
+            'driver' => 'jwt',
             'provider' => 'pegawai',
         ],
         // JWT GUARD (UNTUK API)
