@@ -14,10 +14,10 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-// Route::middleware('throttle:60,1')->group(function () {
-Route::get('/login', [\App\Http\Controllers\Api\AuthController::class, 'login'])->name('api.login');
-Route::post('/login', [\App\Http\Controllers\Api\AuthController::class, 'login'])->name('login');
-// });
+Route::middleware('throttle:siaptek')->group(function () {
+    Route::get('/login', [\App\Http\Controllers\Api\AuthController::class, 'login'])->name('api.login');
+    Route::post('/login', [\App\Http\Controllers\Api\AuthController::class, 'login'])->name('login');
+});
 
 
 Route::middleware(['auth:sanctum', 'throttle:siaptek'])->get('/user', function (Request $request) {
