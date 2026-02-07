@@ -963,10 +963,51 @@ class PegawaiController extends Controller
         // dd('a')
         try {
             // Cache data pegawai
-            $user = Cache::remember("pegawai_{$id}", now()->addMinutes(10), function () use ($id) {
-                return Pegawai::findOrFail($id);
+            // $user = Cache::remember("pegawai_{$id}", now()->addMinutes(10), function () use ($id) {
+            //     return Pegawai::findOrFail($id);
+            // });
+            $user = Cache::remember("pegawai_$id", now()->addMinutes(60), function () use ($id) {
+                return Pegawai::select(
+                    'id',
+                    'dinas_id',
+                    'name',
+                    'gender',
+                    'place_of_birth',
+                    'date_of_birth',
+                    'religion_id',
+                    'marriage_id',
+                    'email',
+                    'password',
+                    'imei',
+                    'position_pegawai',
+                    'jenjang_pendidikan_id',
+                    'active',
+                    'nip',
+                    'nuptk',
+                    'status_tugas',
+                    'no_hp',
+                    'sk_cpns',
+                    'tgl_cpns',
+                    'sk_pengangkatan',
+                    'tmt_pengangkatan',
+                    'status_kepegawaian',
+                    'pangkat_gol_id',
+                    'tmt_pangkat',
+                    'masa_kerja_tahun',
+                    'masa_kerja_bulan',
+                    'tpp',
+                    'nama_pendidikan',
+                    'thn_lulus_pendidikan',
+                    'jenjang_pendidikan',
+                    'nama_diklat',
+                    'tgl_diklat',
+                    'jam_diklat',
+                    'gelar_depan',
+                    'gelar_belakang',
+                    'fake_gps'
+                )
+                    ->findOrFail($id);
             });
-
             // // Cache versi aplikasi
             // $versi = Cache::remember('app_version', now()->addMinutes(10), function() {
             //     return DB::table('versi')->value('versi');
