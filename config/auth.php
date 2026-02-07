@@ -14,7 +14,7 @@ return [
     */
 
     'defaults' => [
-        'guard' => 'web',
+        'guard' => 'api',
         'passwords' => 'users',
     ],
 
@@ -42,6 +42,11 @@ return [
         ],
         'pegawai' => [
             'driver' => 'session',
+            'provider' => 'pegawai',
+        ],
+        // JWT GUARD (UNTUK API)
+        'api' => [
+            'driver' => 'jwt',
             'provider' => 'pegawai',
         ],
     ],
