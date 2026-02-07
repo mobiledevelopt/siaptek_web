@@ -41,8 +41,9 @@ return [
             'provider' => 'users',
         ],
         'pegawai' => [
-            'driver' => 'jwt',
+            'driver' => 'token',
             'provider' => 'pegawai',
+            'hash' => false,
         ],
         // JWT GUARD (UNTUK API)
         'api' => [
