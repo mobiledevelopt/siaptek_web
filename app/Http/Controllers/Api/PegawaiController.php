@@ -1016,10 +1016,12 @@ class PegawaiController extends Controller
             $from = Carbon::now()->startOfMonth()->toDateString();
             $to = Carbon::now()->endOfMonth()->toDateString();
 
-            // $tpp = AttendancesPegawai::where('pegawai_id', $user->id)
-            //     ->whereBetween('date_attendance', [$from, $to])
-            //     ->sum('tpp_diterima');
             $tpp = 0;
+            
+            $tpp = AttendancesPegawai::where('pegawai_id', $user->id)
+                ->whereBetween('date_attendance', [$from, $to])
+                ->sum('tpp_diterima');
+            
             // Menambahkan versi ke dalam data user
             $user->versi = '1.0.2-dev';
 
