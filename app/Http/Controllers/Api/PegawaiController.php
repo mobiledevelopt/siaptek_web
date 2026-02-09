@@ -960,7 +960,7 @@ class PegawaiController extends Controller
 
     public function show(string $id)
     {
-        // dd('a')
+        // dd('a');
         try {
             // Cache data pegawai
             // $user = Cache::remember("pegawai_{$id}", now()->addMinutes(10), function () use ($id) {
@@ -984,7 +984,6 @@ class PegawaiController extends Controller
                     'active',
                     'nip',
                     'nuptk',
-                    'status_tugas',
                     'no_hp',
                     'sk_cpns',
                     'tgl_cpns',
@@ -1037,7 +1036,7 @@ class PegawaiController extends Controller
         } catch (Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Terjadi kesalahan. Silakan coba lagi.'
+                'message' => 'Terjadi kesalahan. Silakan coba lagi. '.$e->getMessage()
             ], 500);
         }
     }
