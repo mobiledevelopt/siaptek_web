@@ -49,7 +49,7 @@ class AuthController extends Controller
             $user->save();
         }
 
-        $user->tokens()->delete();
+        // $user->tokens()->delete();
         $token = $user->createToken('auth_token')->plainTextToken;
 
         $versi = DB::select('select versi from versi');
