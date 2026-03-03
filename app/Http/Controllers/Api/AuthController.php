@@ -18,13 +18,13 @@ class AuthController extends Controller
 
         if (!Auth::guard('pegawai')->attempt(['nip' => $request->email, 'password' => $request->password]) && !Auth::guard('pegawai')->attempt(['email' => $request->email, 'password' => $request->password]) && !Auth::guard('pegawai')->attempt(['nuptk' => $request->email, 'password' => $request->password])) {
             return response()->json([
-                'message' => 'Unauthorized'
+                'message' => "Username atau password \n salah"
             ], 401);
         }
 
         $user = Pegawai::where('email', $request->email)->orWhere('nip', $request->email)->orWhere('nuptk', $request->email)->firstOrFail();
 
-        if ($user->active === 2) {
+        if ($user->active === 2 || $user->active === 0) {
             return response()->json([
                 'message' => 'Akun Anda Non Aktif'
             ], 401);

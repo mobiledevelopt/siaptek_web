@@ -51,8 +51,11 @@ class SaveImageJob implements ShouldQueue
             });
             
             Storage::disk('public')->put($this->pathFolder, $img->stream());
-            
             Log::info("Image move compress successfully: {$this->imageName}");
+
+            // delete temp file
+            Storage::disk('public')->delete($this->path);
+            Log::info("Temp image deleted: {$this->path}");
 
         } catch (\Exception $e) {
             Log::error("Error processing image move compress: {$this->imageName}. Error: {$e->getMessage()} .Path: ". storage_path("app/public/{$this->path}"));

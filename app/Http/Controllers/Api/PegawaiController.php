@@ -446,7 +446,8 @@ class PegawaiController extends Controller
     public function clock_in_new(Request $request)
     {
         // ===== VALIDASI AWAL (CEPAT) =====
-        if (in_array(date('w'), [0, 6])) {
+        $dayOfWeek = date('w');
+        if (in_array($dayOfWeek, [0, 6])) {
             return response()->json(['message' => 'Tidak ada jadwal presensi hari ini']);
         }
 
@@ -462,7 +463,8 @@ class PegawaiController extends Controller
         //     fn() => JamAbsen::find(date('w') <= 4 ? 1 : 2)
         // );
 
-        $jadwal = JamAbsen::find(date('w') <= 4 ? 1 : 2);
+
+        $jadwal = JamAbsen::find($dayOfWeek <= 4 ? 1 : 2);
 
 
         $level_telat = cache()->remember(
@@ -742,6 +744,10 @@ class PegawaiController extends Controller
 
     function sync(Request $request)
     {
+        // return response()->json(['message' => 'Server unreachable'], 503);
+        // abort(500, 'Simulasi 500 error');
+        // return response()->json(['message' => 'Bad request'], 400);
+        // return response()->json(['message' => null], 520);
 
         $id = $request->id;
         try {
@@ -764,7 +770,7 @@ class PegawaiController extends Controller
                 ->sum('tpp_diterima');
 
             // Menambahkan versi ke dalam data user
-            $user->versi = '1.0.2-dev';
+            $user->versi = '1.0.2';
 
             $jam = JamAbsen::orderBy('id', 'ASC')->get()->map(function ($dat) {
                 $dat->jam_masuk = date('H:i', strtotime($dat->jam_masuk));
@@ -960,7 +966,7 @@ class PegawaiController extends Controller
 
     public function show(string $id)
     {
-        // dd('a');
+
         try {
             // Cache data pegawai
             // $user = Cache::remember("pegawai_{$id}", now()->addMinutes(10), function () use ($id) {
@@ -1017,11 +1023,11 @@ class PegawaiController extends Controller
             $to = Carbon::now()->endOfMonth()->toDateString();
 
             $tpp = 0;
-            
+
             $tpp = AttendancesPegawai::where('pegawai_id', $user->id)
                 ->whereBetween('date_attendance', [$from, $to])
                 ->sum('tpp_diterima');
-            
+
             // Menambahkan versi ke dalam data user
             $user->versi = '1.0.2-dev';
 
@@ -1038,7 +1044,7 @@ class PegawaiController extends Controller
         } catch (Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Terjadi kesalahan. Silakan coba lagi. '.$e->getMessage()
+                'message' => 'Terjadi kesalahan. Silakan coba lagi. ' . $e->getMessage()
             ], 500);
         }
     }

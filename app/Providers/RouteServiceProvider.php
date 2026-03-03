@@ -31,19 +31,22 @@ class RouteServiceProvider extends ServiceProvider
         RateLimiter::for('siaptek', function (Request $request) {
             return Limit::perMinute(5000)
                 // ->by($request->user()?->id ?: $request->ip())
-                ->response(function () {
-                    return response()->json(['message' => 'Terlalu banyak permintaan. Harap tunggu selama 1 menit \n'], 429);
+                ->response(function (Request $request, array $headers) {
+                    return response()->json([
+                        'message' => 'Terlalu banyak permintaan.',
+                        'retry_after_seconds' => $headers['Retry-After'] ?? null,
+                    ], 429)->withHeaders($headers); // ← WAJIB
                 });
         });
-        
+
         RateLimiter::for('siaptek_post', function (Request $request) {
             return Limit::perMinute(200)
                 // ->by($request->user()?->id ?: $request->ip())
                 ->response(function () {
-                    return response()->json(['message' => 'Terlalu banyak permintaan. Harap tunggu selama 1 menit'." \n"], 429);
+                    return response()->json(['message' => 'Terlalu banyak permintaan. Harap tunggu selama 1 menit' . " \n"], 429);
                 });
         });
-        
+
         $this->routes(function () {
             Route::middleware('api')
                 ->prefix('api')

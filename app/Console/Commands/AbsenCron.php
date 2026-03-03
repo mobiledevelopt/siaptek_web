@@ -72,7 +72,7 @@ class AbsenCron extends Command
 
                 $configTpp = ConfigPotTpp::all();
                 if ($cek_absen === null || $cek_absen->incoming_time === null) {
-                    Log::info("alpha id " . $item->id . " " . $item->name);
+                    // Log::info("alpha id " . $item->id . " " . $item->name);
                     //tidak masuk
                     AttendancesPegawai::create([
                         'dinas_id' => $item->dinas_id,
@@ -90,7 +90,7 @@ class AbsenCron extends Command
                         'potongan_tidak_masuk_kerja' => $total_potongan_tpp
                     ]);
                 } elseif ($cek_absen->ket_cuti === null && $cek_absen->ket_tidak_masuk_kerja === null) {
-                    Log::info("tidak absen pulang id " . $item->id . " " . $item->name);
+                    // Log::info("tidak absen pulang id " . $item->id . " " . $item->name);
                     $potongan_tpp = 0;
                     $potongan_tpp_apel = 0;
                     $potongan_apel_persen = 0;
@@ -173,7 +173,7 @@ class AbsenCron extends Command
                     AttendancesPegawai::where("id", $cek_absen->id)->update($dataAttendancesPegawai);
                 }
             }
-            Log::info("sudah diinput smw ");
+            Log::info("sudah diinput smw presensi");
         });
     }
 }
