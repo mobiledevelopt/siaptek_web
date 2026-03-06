@@ -35,8 +35,6 @@ class MoveCompressImage extends Command
             // Check and save images for each path
             $this->processImage($item->foto_absen_masuk_path, "temp");
             $this->processImage($item->foto_absen_pulang_path, "temp");
-            // $this->processImage($item->foto_apel_pagi_path, "temp_apel");
-            // $this->processImage($item->foto_apel_sore_path, "temp_apel");
             $this->processImage($item->foto_apel_pagi_path, "temp");
             $this->processImage($item->foto_apel_sore_path, "temp");
         }
@@ -49,7 +47,8 @@ class MoveCompressImage extends Command
             $fullPath = storage_path("app/public/{$pathFile}/{$fileName}");
             if (!file_exists($fullPath)) {
                 Log::info("SaveImageJob");
-                SaveImageJob::dispatch("{$tempPath}/{$fileName}", "{$pathFile}/{$fileName}", $fileName, $tempPath);
+                $save = SaveImageJob::dispatch("{$tempPath}/{$fileName}", "{$pathFile}/{$fileName}", $fileName, $tempPath);
+                Log::info("SaveImageJob", ['save' => $save]);
             }
         }
     }

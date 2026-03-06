@@ -668,7 +668,7 @@ class PegawaiController extends Controller
             return response()->json(['message' => 'Absen tidak ditemukan'], 404);
         }
 
-        $upload = $this->saveImageNew($request->file('file'), 'presensi_pegawai_upload_tes', 'temp');
+        $upload = $this->saveImageNew($request->file('file'), 'presensi_pegawai_upload', 'temp');
 
         $path = $upload[0];
         $url = $upload[1];

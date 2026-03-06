@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\FcmController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -67,4 +68,6 @@ Route::middleware(['auth:sanctum', 'throttle:siaptek'])->group(function () {
     Route::post('/updatePP', [\App\Http\Controllers\Api\PegawaiController::class, 'update_pp']);
     Route::post('/updatePW', [\App\Http\Controllers\Api\PegawaiController::class, 'update_pw']);
     Route::post('/blockFakeGps', [\App\Http\Controllers\Api\PegawaiController::class, 'block_fake_gps']);
+    Route::post('/save-fcm-token', [FcmController::class, 'store']);
+    Route::post('/send-fcm', [FcmController::class, 'sendNotification']);
 });

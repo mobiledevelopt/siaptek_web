@@ -70,7 +70,8 @@ class Pegawai extends Authenticatable implements JWTSubject
         "jam_diklat",
         "gelar_depan",
         "gelar_belakang",
-        "fake_gps"
+        "fake_gps",
+        "fcm_token"
     ];
 
     /**
