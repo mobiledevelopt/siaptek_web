@@ -10,6 +10,7 @@ class ConfigPotTpp extends Model
     use HasFactory;
     protected $table = "config_potongan_tpp";
     protected $fillable     = [
+        'title',
         'dari_meni',
         'sampai_menit',
         'persentase_potongan',

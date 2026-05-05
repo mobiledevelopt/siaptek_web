@@ -54,9 +54,15 @@ class PresensiReminder extends Command
             $jadwalPresensi = JamAbsen::find(1);
             $jadwalApel = JadwalApel::where('hari', date('w'))->first();
 
-            $this->checkAndSendTopik($jadwalPresensi->jam_masuk, 'presensi', 'Waktunya Presensi Masuk', 'Jangan sampai terlewat', true, 'reminder_presensi');
-            $this->checkAndSendTopik($jadwalApel->jam_apel_pagi, 'apel', 'Waktunya Apel Pagi', 'Jangan sampai terlewat', true, $topicNow);
-            $this->checkAndSendTopik($jadwalPresensi->jam_pulang, 'presensi', 'Waktunya Presensi Pulang', 'Jangan sampai terlewat', true, $topicNow);
+            if ($jadwalPresensi && $jadwalPresensi->jam_masuk) {
+                $this->checkAndSendTopik($jadwalPresensi->jam_masuk, 'presensi', 'Waktunya Presensi Masuk', 'Jangan sampai terlewat', true, 'reminder_presensi');
+            }
+            if ($jadwalApel && $jadwalApel->jam_apel_pagi) {
+                $this->checkAndSendTopik($jadwalApel->jam_apel_pagi, 'apel', 'Waktunya Apel Pagi', 'Jangan sampai terlewat', true, $topicNow);
+            }
+            if ($jadwalPresensi && $jadwalPresensi->jam_pulang) {
+                $this->checkAndSendTopik($jadwalPresensi->jam_pulang, 'presensi', 'Waktunya Presensi Pulang', 'Jangan sampai terlewat', true, $topicNow);
+            }
 
         } else {
 
@@ -64,10 +70,18 @@ class PresensiReminder extends Command
             $jadwalPresensi = JamAbsen::find(2);
             $jadwalApel = JadwalApel::where('hari', date('w'))->first();
 
-            $this->checkAndSendTopik($jadwalPresensi->jam_masuk, 'presensi', 'Waktunya Presensi Masuk', 'Jangan sampai terlewat', true, 'reminder_presensi','presensi_masuk');
-            $this->checkAndSendTopik($jadwalApel->jam_apel_pagi, 'apel', 'Waktunya Apel Pagi', 'Jangan sampai terlewat', true, $topicNow, 'apel_pagi');
-            $this->checkAndSendTopik($jadwalApel->jam_apel_sore, 'apel', 'Waktunya Apel Sore', 'Jangan sampai terlewat', true, $topicNow, 'apel_sore');
-            $this->checkAndSendTopik($jadwalPresensi->jam_pulang, 'presensi', 'Waktunya Presensi Pulang', 'Jangan sampai terlewat', true, $topicNow, 'presensi_pulang');
+            if ($jadwalPresensi && $jadwalPresensi->jam_masuk) {
+                $this->checkAndSendTopik($jadwalPresensi->jam_masuk, 'presensi', 'Waktunya Presensi Masuk', 'Jangan sampai terlewat', true, 'reminder_presensi','presensi_masuk');
+            }
+            if ($jadwalApel && $jadwalApel->jam_apel_pagi) {
+                $this->checkAndSendTopik($jadwalApel->jam_apel_pagi, 'apel', 'Waktunya Apel Pagi', 'Jangan sampai terlewat', true, $topicNow, 'apel_pagi');
+            }
+            if ($jadwalApel && $jadwalApel->jam_apel_sore) {
+                $this->checkAndSendTopik($jadwalApel->jam_apel_sore, 'apel', 'Waktunya Apel Sore', 'Jangan sampai terlewat', true, $topicNow, 'apel_sore');
+            }
+            if ($jadwalPresensi && $jadwalPresensi->jam_pulang) {
+                $this->checkAndSendTopik($jadwalPresensi->jam_pulang, 'presensi', 'Waktunya Presensi Pulang', 'Jangan sampai terlewat', true, $topicNow, 'presensi_pulang');
+            }
 
         }
     }

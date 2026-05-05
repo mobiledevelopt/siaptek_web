@@ -77,6 +77,7 @@ Route::middleware('auth')->group(function () {
     Route::prefix('presensi-pegawai')->group(function () {
         Route::get('', [PresensiPegawai::class, 'Index'])->name('presensi-pegawai.index');
         Route::get('export', [PresensiPegawai::class, 'export'])->name('presensi-pegawai.export');
+        Route::get('export-status/{jobId}', [PresensiPegawai::class, 'exportStatus'])->name('presensi-pegawai.export-status');
         Route::get('exportPdf', [PresensiPegawai::class, 'exportPdf'])->name('presensi-pegawai.exportPdf');
         Route::get('updateTidakMasuk', [PresensiPegawai::class, 'updateTidakMasuk'])->name('presensi-pegawai.updateTidakMasuk');
         Route::post('datatable', [PresensiPegawai::class, 'Datatable'])->name('presensi-pegawai.datatable');

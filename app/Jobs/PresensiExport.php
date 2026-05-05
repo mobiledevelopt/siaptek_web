@@ -23,21 +23,24 @@ class PresensiExport implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable;
 
 
-    public function __construct($data, $periode, $start, $end)
+    public function __construct($data, $periode, $start, $end, $status)
     {
         $this->data = $data;
         $this->periode = $periode;
         $this->start = $start;
         $this->end = $end;
+        $this->status = $status;
     }
 
     public $data;
     public $periode;
     public $start;
     public $end;
+    public $status;
 
     public function handle()
     {
+
         $styleArray = array(
             'borders' => array(
                 'allBorders' => array(
@@ -164,14 +167,16 @@ class PresensiExport implements ShouldQueue
         $spreadsheet->getActiveSheet()->getStyle('A' . $i . ':C' . $i)
             ->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
 
-        $spreadsheet->getActiveSheet()->getProtection()->setSheet(true);
-        $protection = $spreadsheet->getActiveSheet()->getProtection();
-        $protection->setPassword("ABCDEFGHIJKLMNOPQRSTUVWX");
-        $protection->setSheet(true);
+        // $spreadsheet->getActiveSheet()->getProtection()->setSheet(true);
+        // $protection = $spreadsheet->getActiveSheet()->getProtection();
+        // $protection->setPassword("ABCDEFGHIJKLMNOPQRSTUVWX");
+        // $protection->setSheet(true);
 
         foreach ($this->data as $val) {
+            
             //create tab sheet
-            $data_pegawai = $this->initData($this->start, $this->end, $val->dinas_id, $val->pegawai_id);
+            $data_pegawai = $this->initData($this->start, $this->end, $val->dinas_id, $val->pegawai_id, $this->status);
+            dd($data_pegawai);
             $this->addSheet($spreadsheet, $val->nama, $data_pegawai, $this->periode);
         }
 
@@ -185,14 +190,18 @@ class PresensiExport implements ShouldQueue
         header('Pragma: public');
 
         $writer = IOFactory::createWriter($spreadsheet, 'Xlsx');
-        // $writer->save('php://output');
 
-        $writer->save(storage_path('laporan-presensi-pegawai_' . $this->start . '-' . $this->end . '.xlsx'));
-        event(new SendGlobalNotification(url('/storage/') . '/' . 'laporan-presensi-pegawai_' . $this->start . '-' . $this->end . '.xlsx'));
+        // jika pakai job lagi
+        // $writer->save(storage_path('laporan-presensi-pegawai_' . $this->start . '-' . $this->end . '.xlsx'));
+        // event(new SendGlobalNotification(url('/storage/') . '/' . 'laporan-presensi-pegawai_' . $this->start . '-' . $this->end . '.xlsx'));
+        
+
+        // sementara tidak pakai job
+        // $writer->save('php://output');
         // exit;
     }
 
-    protected function initData($start = null, $end = null, $id = null, $pegawai_id = null)
+    protected function initData($start = null, $end = null, $id = null, $pegawai_id = null, $status = null)
     {
         $data = DB::table('attendances_pegawai')
             ->select([
@@ -216,11 +225,20 @@ class PresensiExport implements ShouldQueue
             $data->where('attendances_pegawai.pegawai_id', $pegawai_id);
         }
 
+        if ($status != null) {
+            if ($status === "Masuk") {
+                $data->where('attendances_pegawai.status', '=', $status);
+            } else {
+                $data->where('attendances_pegawai.status', '!=', 'Masuk');
+            }
+        }
+
         return $data->get();
     }
 
     private function addSheet($spreadsheet, $title, $data, $periode)
     {
+        dd($data);
         $title = substr($title, 0, 30);
         $myWorkSheet = new \PhpOffice\PhpSpreadsheet\Worksheet\Worksheet($spreadsheet, $title);
         $spreadsheet->addSheet($myWorkSheet);
@@ -378,9 +396,9 @@ class PresensiExport implements ShouldQueue
             ->setCellValue('S' . $i, "=SUM($sum_range_tpp_diterima)");
 
         // dd($spreadsheet->getActiveSheet());
-        $spreadsheet->getActiveSheet()->getProtection()->setSheet(true);
-        $protection = $spreadsheet->getActiveSheet()->getProtection();
-        $protection->setPassword("ABCDEFGHIJKLMNOPQRSTUVWX");
-        $protection->setSheet(true);
+        // $spreadsheet->getActiveSheet()->getProtection()->setSheet(true);
+        // $protection = $spreadsheet->getActiveSheet()->getProtection();
+        // $protection->setPassword("ABCDEFGHIJKLMNOPQRSTUVWX");
+        // $protection->setSheet(true);
     }
 }

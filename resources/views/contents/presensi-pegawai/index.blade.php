@@ -10,7 +10,7 @@
                          <h4 class="card-title">Data Presensi Pegawai</h4>
                      </div>
                      <form>
-                         <input class="form-control" name="status" type="hidden" value="{{ @$status }}" readonly>
+                         <input class="form-control" id="status" name="status" type="hidden" value="{{ @$status }}" readonly>
                          <div class="row mt-4">
                              <div class="col-sm-6 col-lg-4">
                                  <div class="form-group">
@@ -35,6 +35,8 @@
                                          <button class="btn btn-success" id="export">Excel</button>
                                          <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#exampleModal">PDF</button>
                                      </div>
+                                     <small id="exportStatus" class="text-muted d-none mt-1"></small>
+                                     <div id="exportLinks" class="d-none mt-2"></div>
                                  </div>
                              </div>
                          </div>
@@ -377,21 +379,93 @@
              dataTable.draw();
          });
 
+         const downloadFileByBlob = async function(file) {
+             if (!file || !file.url) {
+                 return;
+             }
+
+             const response = await fetch(file.url, {
+                 credentials: 'same-origin'
+             });
+
+             if (!response.ok) {
+                 throw new Error('Gagal mengunduh file: ' + file.url);
+             }
+
+             const blob = await response.blob();
+             const blobUrl = window.URL.createObjectURL(blob);
+             const link = document.createElement('a');
+             link.href = blobUrl;
+             link.download = file.filename || '';
+             document.body.appendChild(link);
+             link.click();
+             document.body.removeChild(link);
+             window.URL.revokeObjectURL(blobUrl);
+         };
+
+         const downloadExportFiles = async function(payload) {
+             const files = Array.isArray(payload.files) && payload.files.length > 0
+                 ? payload.files
+                 : (payload.url ? [{ url: payload.url, filename: payload.filename || '' }] : []);
+
+             for (const file of files) {
+                 await downloadFileByBlob(file);
+             }
+         };
+
+         const renderExportLinks = function(payload) {
+             const files = Array.isArray(payload.files) && payload.files.length > 0
+                 ? payload.files
+                 : (payload.url ? [{ label: 'file', url: payload.url, filename: payload.filename || '' }] : []);
+
+             const container = $('#exportLinks');
+             container.addClass('d-none').empty();
+
+             if (files.length === 0) {
+                 return;
+             }
+
+             let html = "<div class='small text-muted mb-1'>Link download:</div><div class='d-flex flex-wrap gap-2'>";
+             files.forEach(function(file) {
+                 const label = (file.label || file.filename || 'file').toString().toUpperCase();
+                 html += "<a class='btn btn-sm btn-outline-success' href='" + file.url + "' target='_blank' rel='noopener' download>Download " + label + "</a>";
+             });
+             html += "</div>";
+
+             container.html(html).removeClass('d-none');
+         };
+
          $('#export').on('click', function(e) {
              e.preventDefault();
              let btnSubmitHtml = $('#export').html();
              let dinas = $('#dinas').val();
              let dari = $('#dari').val();
              let hingga = $('#hingga').val();
+             let status = $('#status').val();
+
+             const showExportStatus = function(message, statusClass, withSpinner = false) {
+                 let icon = withSpinner
+                     ? "<span class='spinner-border spinner-border-sm align-middle me-1' role='status' aria-hidden='true'></span>"
+                     : "";
+
+                 $('#exportStatus')
+                     .removeClass('d-none text-muted text-primary text-success text-danger')
+                     .addClass(statusClass)
+                     .html(icon + message);
+             };
+
              $.ajax({
                  beforeSend: function() {
+                     showExportStatus('Mengirim permintaan export...', 'text-primary', true);
+                     $('#exportLinks').addClass('d-none').empty();
                      $('#export').addClass("disabled").html("<i class='bx bx-hourglass bx-spin font-size-16 align-middle me-2'></i> Loading ...").prop("disabled", "disabled");
                  },
                  type: "GET",
                  data: {
                      dinas: dinas,
                      dari: dari,
-                     hingga: hingga
+                     hingga: hingga,
+                     status: status
                  },
                  url: "{{ route('presensi-pegawai.export') }}",
                  success: function(response) {
@@ -399,11 +473,23 @@
                      let errorCreate = $('#errorCreate');
                      errorCreate.css('display', 'none');
                      errorCreate.find('.alert-text').html('');
-                     $('#export').removeClass("disabled").html(btnSubmitHtml).removeAttr("disabled");
-                     if (response.status === "success") {
+
+                     if (response.status === "queued") {
+                         $('#export').addClass("disabled").html("<i class='bx bx-loader bx-spin font-size-16 align-middle me-2'></i> Diproses ...").prop("disabled", "disabled");
+                         showExportStatus('Export sedang diproses di background. Mohon tunggu...', 'text-primary', true);
+                         toastr.info(response.message, 'Info !');
+                         pollExportStatus(response.job_id, response.check_url, btnSubmitHtml, showExportStatus);
+                     } else if (response.status === "success") {
+                         $('#export').removeClass("disabled").html(btnSubmitHtml).removeAttr("disabled");
+                         showExportStatus('Export selesai. File siap diunduh.', 'text-success');
                          toastr.success(response.message, 'Success !');
-                         window.open(response.url, '_blank');
+                         renderExportLinks(response);
+                         downloadExportFiles(response).catch(function() {
+                             showExportStatus('Export selesai. Jika file kedua tidak otomatis terunduh, gunakan tombol Download di bawah.', 'text-success');
+                         });
                      } else {
+                         $('#export').removeClass("disabled").html(btnSubmitHtml).removeAttr("disabled");
+                         showExportStatus('Export gagal diproses.', 'text-danger');
                          toastr.error((response.message ? response.message : "Gagal refresh data"), 'Failed !');
                          if (response.error !== undefined) {
                              errorCreate.removeAttr('style');
@@ -415,10 +501,59 @@
                  },
                  error: function(response) {
                      $('#export').removeClass("disabled").html(btnSubmitHtml).removeAttr("disabled");
+                     showExportStatus('Export gagal diproses.', 'text-danger');
                      toastr.error(response.responseJSON.message, 'Failed !');
                  }
              });
          });
+
+         function pollExportStatus(jobId, checkUrl, btnSubmitHtml, showExportStatus) {
+             let retry = 0;
+             let maxRetry = 240;
+
+             let timer = setInterval(function() {
+                 retry++;
+
+                 showExportStatus('Export sedang diproses... (' + retry + ')', 'text-primary', true);
+
+                 $.ajax({
+                     type: "GET",
+                     url: checkUrl,
+                     success: function(response) {
+                         if (response.status === "success") {
+                             clearInterval(timer);
+                             $('#export').removeClass("disabled").html(btnSubmitHtml).removeAttr("disabled");
+                             showExportStatus('Export selesai. File siap diunduh.', 'text-success');
+                             toastr.success(response.message, 'Success !');
+                             renderExportLinks(response);
+                             downloadExportFiles(response).catch(function() {
+                                 showExportStatus('Export selesai. Jika file kedua tidak otomatis terunduh, gunakan tombol Download di bawah.', 'text-success');
+                             });
+                         } else if (response.status === "failed") {
+                             clearInterval(timer);
+                             $('#export').removeClass("disabled").html(btnSubmitHtml).removeAttr("disabled");
+                             showExportStatus((response.message ? response.message : 'Export gagal diproses.'), 'text-danger');
+                             toastr.error((response.message ? response.message : "Export gagal"), 'Failed !');
+                         }
+                     },
+                     error: function() {
+                         if (retry >= maxRetry) {
+                             clearInterval(timer);
+                             $('#export').removeClass("disabled").html(btnSubmitHtml).removeAttr("disabled");
+                             showExportStatus('Waktu tunggu export habis. Silakan coba lagi.', 'text-danger');
+                             toastr.error('Waktu tunggu export habis. Silakan coba lagi.', 'Failed !');
+                         }
+                     }
+                 });
+
+                 if (retry >= maxRetry) {
+                     clearInterval(timer);
+                     $('#export').removeClass("disabled").html(btnSubmitHtml).removeAttr("disabled");
+                     showExportStatus('Waktu tunggu export habis. Silakan coba lagi.', 'text-danger');
+                     toastr.error('Waktu tunggu export habis. Silakan coba lagi.', 'Failed !');
+                 }
+             }, 3000);
+         }
          
          $('#pegawai').select2({
              dropdownParent: $('#pegawai').parent(),

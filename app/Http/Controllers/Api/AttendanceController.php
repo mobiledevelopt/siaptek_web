@@ -20,10 +20,31 @@ class AttendanceController extends Controller
     public function clockOut(Request $request, AttendanceService $service)
     {
         try {
-            $service->clockOut($request->user());
-            return response()->json(['message' => 'Presensi pulang berhasil']);
+            $absen = $service->clockOut($request->user());
+            return response()->json(['message' => 'Presensi pulang berhasil', 'id_absen' => $absen->id]);
         } catch (\Exception $e) {
             return response()->json(['message' => $e->getMessage()], 400);
         }
     }
+
+    public function apelPagi(Request $request, AttendanceService $service)
+    {
+        try {
+            $absen = $service->apel($request->user(), 'pagi');
+            return response()->json(['message' => 'Presensi Apel Pagi Berhasil', 'id_absen' => $absen->id]);
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 400);
+        }
+    }
+
+    public function apelSore(Request $request, AttendanceService $service)
+    {
+        try {
+            $absen = $service->apel($request->user(), 'sore');
+            return response()->json(['message' => 'Presensi Apel Sore Berhasil', 'id_absen' => $absen->id]);
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 400);
+        }
+    }
+
 }

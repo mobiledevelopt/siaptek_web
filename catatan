@@ -1,0 +1,210 @@
+🧱 ✅ FINAL STRUKTUR FOLDER TEST
+tests/
+├── Feature/
+│   ├── Attendance/
+│   │   ├── Cron/
+│   │   │   ├── CronApelTest.php
+│   │   │   ├── CronClockOutTest.php
+│   │   │   ├── CronIdempotentTest.php
+│   │   │   └── CronFullFlowTest.php
+│   │   │
+│   │   ├── Payroll/
+│   │   │   ├── PayrollCalculatorTest.php
+│   │   │   ├── PayrollConsistencyTest.php
+│   │   │   └── PayrollEdgeCaseTest.php
+│   │   │
+│   │   ├── Potongan/
+│   │   │   ├── PotonganTelatTest.php
+│   │   │   ├── PotonganApelTest.php
+│   │   │   ├── PotonganPulangTest.php
+│   │   │   └── AttendanceMatrixTest.php
+│   │   │
+│   │   ├── Audit/
+│   │   │   ├── AuditLogTest.php
+│   │   │   └── AuditIdempotentTest.php
+│   │   │
+│   │   └── Integration/
+│   │       ├── CronVsCalculatorTest.php
+│   │       └── AttendanceProductionSimulationTest.php
+│   │
+│   └── Shared/
+│       └── DatabaseHealthTest.php
+│
+├── Unit/
+│   ├── Services/
+│   │   └── Attendance/
+│   │       └── PayrollCalculatorUnitTest.php
+│   │
+│   └── Helpers/
+│       └── PotonganLoggerTest.php
+│
+├── Traits/
+│   ├── CronTestSetup.php
+│   ├── CreatesAttendance.php
+│   └── PayrollAssertions.php
+│
+└── Datasets/
+    └── AttendanceMatrixDataset.php
+
+    🧠 PENJELASAN (INI YANG PENTING)
+1️⃣ Feature/Attendance/Cron/
+
+👉 Semua test yang menjalankan cron handler
+
+Contoh:
+
+telat
+tidak apel
+tidak pulang
+idempotent
+2️⃣ Feature/Attendance/Payroll/
+
+👉 Fokus ke logic perhitungan
+
+hanya validasi angka
+tidak peduli DB update
+3️⃣ Feature/Attendance/Potongan/
+
+👉 Test per jenis potongan
+
+telat
+apel
+pulang
+
+👉 plus:
+
+matrix test (kombinasi semua)
+4️⃣ Feature/Attendance/Audit/
+
+👉 Khusus audit log
+
+tidak duplicate
+data sesuai calculator
+traceable
+5️⃣ Feature/Attendance/Integration/ 🔥
+
+👉 INI PALING PENTING
+
+Test:
+
+Cron = Calculator
+full production simulation
+6️⃣ Unit/
+
+👉 Pure logic tanpa DB
+
+super cepat
+untuk debug cepat
+7️⃣ Traits/ (WAJIB)
+
+Supaya tidak copy-paste:
+
+8️⃣ Datasets/ (ADVANCED 🔥)
+
+Untuk matrix besar:
+
+Feature vs Unit
+Type	Tujuan
+Unit	logic murni
+Feature	DB + flow
+Integration	full system
+
+1️⃣ Cron Tests
+
+Fokus: pastikan update otomatis apel, clock-in/out, dan idempotent berjalan sesuai jadwal.
+
+Test	Tujuan
+CronApelTest	Pastikan apel pagi & sore tercatat, termasuk Jumat (apel sore opsional)
+CronClockOutTest	Clock out otomatis tercatat & memicu potongan pulang jika tidak ada
+CronIdempotentTest	Menjalankan cron berulang tidak duplikasi potongan/log
+CronFullFlowTest	Simulasi full flow pegawai + hari kerja
+2️⃣ Payroll Tests
+
+Fokus: perhitungan TPP, potongan, edge case.
+
+Test	Tujuan
+PayrollCalculatorTest	Hitung TPP dan potongan berdasarkan 1 absen sederhana
+PayrollConsistencyTest	Beberapa absen dengan kombinasi, pastikan perhitungan konsisten
+PayrollEdgeCaseTest	TPP = 0, jmlHariKerja = 0, pegawai cuti/full izin, Jumat apel sore
+3️⃣ Potongan Tests
+
+Fokus: semua jenis potongan tercatat, nilai & idempotent.
+
+Test	Tujuan
+PotonganTelatTest	Potongan telat tercatat benar
+PotonganApelTest	Potongan tidak apel pagi & sore tercatat
+PotonganPulangTest	Potongan pulang tercatat saat tidak clock out
+AttendanceMatrixTest	Dynamic matrix: semua kombinasi status absen, apel, clock in/out
+4️⃣ Audit / Logging Tests
+
+Fokus: logging potongan dan idempotensi.
+
+Test	Tujuan
+AuditLogTest	Semua potongan tercatat di audit log
+AuditIdempotentTest	Jalankan log ulang → tidak duplikasi
+PotonganLoggerTest	Nilai raw & final sesuai perhitungan, 4 jenis potongan tercatat
+5️⃣ Integration / Production Simulation
+
+Fokus: integrasi semua modul → simulasi produksi.
+
+Test	Tujuan
+CronVsCalculatorTest	Cron update potongan vs perhitungan manual
+AttendanceProductionSimulationTest	Full attendance matrix + audit logs
+AttendanceProductionSimulationExtendedTest	Simulasi extended (full week, banyak pegawai)
+6️⃣ Shared / Helper Tests
+
+Fokus: helper dan dataset.
+
+Test	Tujuan
+PayrollAssertions	Pastikan idempotensi potongan & TPP diterima
+CreatesAttendance	Membuat absen dan log helper
+AttendanceMatrixDataset	Dataset kombinasi absen lengkap, reusable
+
+📂 Struktur Folder & Test Class (Final)
+tests/
+├── Feature/
+│   ├── Attendance/
+│   │   ├── Cron/
+│   │   │   ├── CronApelTest.php             # ✅ Prioritas 1
+│   │   │   ├── CronClockOutTest.php        # ✅ Prioritas 1
+│   │   │   ├── CronIdempotentTest.php      # ✅ Prioritas 1
+│   │   │   └── CronFullFlowTest.php        # 🔹 Prioritas 2
+│   │   │
+│   │   ├── Payroll/
+│   │   │   ├── PayrollCalculatorTest.php    # ✅ Prioritas 1
+│   │   │   ├── PayrollConsistencyTest.php   # 🔹 Prioritas 2
+│   │   │   └── PayrollEdgeCaseTest.php      # 🔹 Prioritas 2
+│   │   │
+│   │   ├── Potongan/
+│   │   │   ├── PotonganTelatTest.php        # ✅ Prioritas 1
+│   │   │   ├── PotonganApelTest.php         # ✅ Prioritas 1
+│   │   │   ├── PotonganPulangTest.php       # ✅ Prioritas 1
+│   │   │   └── AttendanceMatrixTest.php     # 🔹 Prioritas 2
+│   │   │
+│   │   ├── Audit/
+│   │   │   ├── AuditLogTest.php             # ✅ Prioritas 1
+│   │   │   └── AuditIdempotentTest.php     # ✅ Prioritas 1
+│   │   │
+│   │   └── Integration/
+│   │       ├── CronVsCalculatorTest.php                # 🔹 Prioritas 2
+│   │       ├── AttendanceProductionSimulationTest.php # 🔹 Prioritas 2
+│   │       └── AttendanceProductionSimulationExtendedTest.php # 🔹 Prioritas 2
+│   │
+│   └── Shared/
+│       └── DatabaseHealthTest.php           # 🔹 Prioritas 2
+│
+├── Unit/
+│   ├── Services/
+│   │   └── Attendance/
+│   │       └── PayrollCalculatorUnitTest.php   # ✅ Prioritas 1
+│   │
+│   └── Helpers/
+│       └── PotonganLoggerTest.php          # ✅ Prioritas 1
+│
+├── Traits/
+│   ├── CronTestSetup.php
+│   ├── CreatesAttendance.php
+│   └── PayrollAssertions.php
+│
+└── Datasets/
+    └── AttendanceMatrixDataset.php

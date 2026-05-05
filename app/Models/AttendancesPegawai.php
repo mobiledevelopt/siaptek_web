@@ -8,6 +8,13 @@ use Illuminate\Database\Eloquent\Model;
 class AttendancesPegawai extends Model
 {
     use HasFactory;
+
+    const STATUS_MASUK = 'Masuk';
+    const STATUS_DINAS_LUAR = 'Dinas Luar';
+    const STATUS_TIDAK_MASUK = 'Tidak Masuk';
+    const STATUS_IZIN = 'izin';
+    const STATUS_CUTI = 'cuti';
+    
     protected $table = "attendances_pegawai";
     protected $fillable     = [
         'dinas_id',
@@ -51,9 +58,12 @@ class AttendancesPegawai extends Model
         'foto_apel_sore_path',
         'foto_apel_sore',
         'anulir',
-        'ket_anulir'
+        'ket_anulir',
+        'apel_pagi_at',
+        'apel_sore_at'
     ];
 
+    
     public function pegawai()
     {
         return $this->belongsTo(Pegawai::class, 'pegawai_id');

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\FcmController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -42,9 +43,16 @@ Route::middleware(['auth:sanctum', 'throttle:siaptek'])->group(function () {
     Route::post('/apelsore', [\App\Http\Controllers\Api\DaftarHadirApelController::class, 'apel_sore']);
 
     Route::post('/checkinnew', [\App\Http\Controllers\Api\PegawaiController::class, 'clock_in_new']);
+    Route::post('/checkinnew1', [\App\Http\Controllers\Api\PegawaiController::class, 'clock_in_new1']);
     Route::post('/checkoutnew', [\App\Http\Controllers\Api\PegawaiController::class, 'clock_out_new']);
     Route::post('/upload_foto_absen', [\App\Http\Controllers\Api\PegawaiController::class, 'uploadFoto']);
 
+    // new attendance
+    Route::post('/clock-in', [AttendanceController::class, 'clockIn']);
+    Route::post('/clock-out', [AttendanceController::class, 'clockOut']);
+    Route::post('/apel-pagi', [AttendanceController::class, 'apelPagi']);
+    Route::post('/apel-sore', [AttendanceController::class, 'apelSore']);
+    
     // });
 
 

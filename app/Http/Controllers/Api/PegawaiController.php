@@ -12,6 +12,7 @@ use App\Models\JamAbsen;
 use App\Models\Jml_hari_kerja;
 use App\Models\ConfigPotTpp;
 use App\Models\KalendarLibur;
+use App\Services\Attendance\AttendanceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -31,6 +32,12 @@ use Illuminate\Support\Facades\Log;
 class PegawaiController extends Controller
 {
     use Upload;
+    protected $attendanceService;
+
+    public function __construct(AttendanceService $attendanceService)
+    {
+        $this->attendanceService = $attendanceService;
+    }
 
     public function clock_in(Request $request)
     {
@@ -562,6 +569,134 @@ class PegawaiController extends Controller
         ]);
     }
 
+    public function clock_in_new1(Request $request)
+    {
+        $result = $this->attendanceService->clockIn($request->user());
+
+        if (isset($result['error'])) {
+            return response()->json([
+                'message' => $result['error']
+            ], 400);
+        }
+
+        return response()->json([
+            'message' => 'Presensi berhasil',
+            'id_absen' => $result['id_absen']
+        ]);
+
+        // // ===== VALIDASI AWAL (CEPAT) =====
+        // $dayOfWeek = date('w');
+        // if (in_array($dayOfWeek, [0, 6])) {
+        //     return response()->json(['message' => 'Tidak ada jadwal presensi hari ini']);
+        // }
+
+        // if (KalendarLibur::whereDate('tgl', today())->exists()) {
+        //     return response()->json(['message' => 'Hari Ini Libur Presensi']);
+        // }
+
+        // // ===== CACHE KONFIGURASI =====
+
+        // // $jadwal = cache()->remember(
+        // //     'jam_absen_' . date('w'),
+        // //     3600,
+        // //     fn() => JamAbsen::find(date('w') <= 4 ? 1 : 2)
+        // // );
+
+
+        // $jadwal = JamAbsen::find($dayOfWeek <= 4 ? 1 : 2);
+
+
+        // $level_telat = cache()->remember(
+        //     'config_pot_tpp_masuk',
+        //     3600,
+        //     fn() => ConfigPotTpp::whereIn('id', [1, 2, 3, 4])->get()
+        // );
+
+        // // ===== HITUNG JAM =====
+        // $now = time();
+        // if ($now < strtotime($jadwal->min_masuk)) {
+        //     return response()->json(['message' => 'Minimal Jam Presensi ' . date("H:i", strtotime($jadwal->min_masuk))]);
+        // }
+
+        // if ($now > strtotime($jadwal->max_masuk)) {
+        //     return response()->json(['message' => 'Anda melebihi batas maksimal jam masuk']);
+        // }
+
+        // $alreadyClockedIn = AttendancesPegawai::where(
+        //     [
+        //         ['pegawai_id', $request->user()->id],
+        //         ['date_attendance', date('Y-m-d')],
+        //         ['dinas_id', $request->user()->dinas_id]
+        //     ]
+        // )->exists();
+
+        // if ($alreadyClockedIn) {
+        //     return response()->json(['message' => 'Anda sudah presensi masuk']);
+        // }
+
+        // $total_menit = max(0, floor(($now - strtotime($jadwal->jam_masuk)) / 60));
+
+        // $status_masuk = 'Masuk';
+        // $persen_potong = 0;
+        // $ConfigPotTpp_id = null;
+
+        // foreach ($level_telat as $level) {
+        //     if ($total_menit >= $level->dari_meni && $total_menit <= $level->sampai_menit) {
+        //         $status_masuk = $level->title;
+        //         $persen_potong = $level->persentase_potongan;
+        //         $ConfigPotTpp_id = $level->id;
+        //         break;
+        //     }
+        // }
+
+        // // ===== HITUNG tunjangan harian =====
+        // $jml_hari_kerja = Jml_hari_kerja::where([
+        //     'bulan' => date('m'),
+        //     'tahun' => date('Y')
+        // ])->first();
+
+        // if (!$jml_hari_kerja) {
+        //     return response()->json([
+        //         'message' => 'Data jumlah hari kerja bulan ini belum di-set'
+        //     ]);
+        // }
+
+        // $tunjangan_per_hari = $request->user()->tpp / $jml_hari_kerja->jml_hari_kerja;
+
+        // // potongan = (40% * persentase telat)
+        // $total_potongan_tpp = ($tunjangan_per_hari * 40 / 100) * ($persen_potong / 100);
+
+        // $tpp_diterima = $tunjangan_per_hari - $total_potongan_tpp;
+
+        // // ===== ATOMIC INSERT (SUPER CEPAT) =====
+        // try {
+        //     $absen = AttendancesPegawai::create([
+        //         'pegawai_id' => $request->user()->id,
+        //         'dinas_id' => $request->user()->dinas_id,
+        //         'date_attendance' => today(),
+        //         'incoming_time' => now(),
+        //         'tunjangan_per_hari' => $tunjangan_per_hari,
+        //         'menit_telat_masuk' => $total_menit,
+        //         'total_potongan_tpp' => $total_potongan_tpp,
+        //         'potongan_absen_masuk' => $total_potongan_tpp,
+        //         'potongan_absen_masuk_persen' => $persen_potong,
+        //         'tpp_diterima' => $tpp_diterima,
+        //         'ConfigPotTpp_id' => $ConfigPotTpp_id,
+        //         'status' => 'Masuk',
+        //         'menit_telat_masuk' => $total_menit,
+        //         'status_masuk' => $status_masuk
+        //     ]);
+        // } catch (\Illuminate\Database\QueryException $e) {
+        //     return response()->json([
+        //         'message' => 'Anda sudah presensi masuk'
+        //     ]);
+        // }
+
+        // return response()->json([
+        //     'message' => 'Presensi berhasil',
+        //     'id_absen' => $absen->id
+        // ]);
+    }
 
     public function clock_out_new(Request $request)
     {
@@ -652,7 +787,6 @@ class PegawaiController extends Controller
             'message' => 'Presensi Pulang berhasil'
         ]);
     }
-
 
     public function uploadFoto(Request $request)
     {
