@@ -19,6 +19,7 @@ class AttendanceService
         }
 
         AttendanceValidator::hariKerja();
+        AttendanceValidator::sedangIzin($user);
 
         [$jadwal, $jmlHariKerja, $potonganTpp] = AttendanceValidator::validateConfig($user, 'masuk');
 

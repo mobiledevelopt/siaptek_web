@@ -231,195 +231,41 @@ class DaftarHadirApelController extends Controller
         }
     }
 
-    public function apel_pagi(Request $request)
+    public function apel_pagi(Request $request, \App\Services\Attendance\AttendanceService $service)
     {
-
-        $code = 400;
-        $response = [
-            'message' => 'Data tidak lengkap',
-            'data' => []
-        ];
-
-        // cek jadwal apel pagi / sore
-        $jadwal_apel = JadwalApel::where(['dinas_id' => $request->user()->dinas_id, 'hari' => date('w')])->first();
-
-        if ($jadwal_apel->apel_pagi != 1) {
-            return response()->json([
-                'message' => 'Tidak ada jadwal apel pagi hari ini' . "\n",
-            ]);
-        }
-
-        $hari_libur = KalendarLibur::where('tgl', date('Y-m-d'))->first();
-
-        if ($hari_libur != null) {
-            return response()->json([
-                'message' => 'Hari Ini Libur Apel',
-            ]);
-        }
-
-        // cek batas apel pagi
-        if ($jadwal_apel->apel_pagi == 1 && time() < strtotime($jadwal_apel->jam_apel_pagi)) {
-            return response()->json([
-                'message' => 'Minimal Jam Apel ' . date("H:i", strtotime($jadwal_apel->jam_apel_pagi)) . "\n",
-            ]);
-        }
-        if ($jadwal_apel->apel_pagi == 1 && time() > strtotime($jadwal_apel->max_apel_pagi)) {
-            return response()->json([
-                'message' => 'Anda melebihi batas maksimal jam apel pagi' . "\n",
-            ]);
-        }
-
-        // cek presensi apel
-        $presensi_apel = AttendancesPegawai::where([
-            'pegawai_id' => $request->user()->id,
-            'dinas_id' => $request->user()->dinas_id,
-            'date_attendance'     => date('Y-m-d')
-        ])->first();
-
-        if ($presensi_apel === null) {
-            return response()->json([
-                'message' => 'Anda Belum Melakukan Presensi Masuk'
-            ]);
-        }
-
-        // cek presensi apel pagi
-        if ($presensi_apel !== null && $presensi_apel->status_apel_pagi !== null && trim($presensi_apel->status_apel_pagi) !== '') {
-            return response()->json([
-                'message' => 'Anda Sudah Presensi Apel Pagi'
-            ]);
-        }
-
-
-        DB::beginTransaction();
         try {
-            $absen = AttendancesPegawai::updateOrCreate(
-                [
-                    'pegawai_id' => $request->user()->id,
-                    'dinas_id' => $request->user()->dinas_id,
-                    'date_attendance' => date('Y-m-d')
-                ],
-                [
-                    'dinas_id' => $request->user()->dinas_id,
-                    'status_apel' => "Hadir",
-                    'potongan_tidak_apel' => 0,
-                    'potongan_tidak_apel_persen' => 0,
-                    'status_apel_pagi' => "Hadir",
-                    'potongan_tidak_apel_pagi' => 0,
-                    'potongan_tidak_apel_pagi_persen' => 0,
-                    // 'foto_apel_pagi_path' => $path,
-                    // 'foto_apel_pagi' => $attachment
-                ]
-            );
-            $message = 'Presensi Apel Pagi Berhasil';
-
-            DB::commit();
+            $absen = $service->apel($request->user(), 'pagi');
             return response()->json([
-                'message' => $message,
-                'id_absen'  => $absen->id
+                'message' => 'Presensi Apel Pagi Berhasil',
+                'id_absen' => $absen->id
             ]);
-        } catch (\Throwable $throw) {
-            DB::rollBack();
-            $response = response()->json(['error' => $throw->getMessage()]);
+        } catch (\App\Exceptions\ApiException $e) {
             return response()->json([
-                'message' => $response
+                'message' => $e->getMessage()
             ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Terjadi kesalahan sistem'
+            ], 500);
         }
     }
 
-    public function apel_sore(Request $request)
+    public function apel_sore(Request $request, \App\Services\Attendance\AttendanceService $service)
     {
-
-        $code = 400;
-        $response = [
-            'message' => 'Data tidak lengkap',
-            'data' => []
-        ];
-
-        // cek jadwal apel pagi / sore
-        $jadwal_apel = JadwalApel::where(['dinas_id' => $request->user()->dinas_id, 'hari' => date('w')])->first();
-
-        if ($jadwal_apel->apel_sore != 1) {
-            return response()->json([
-                'message' => 'Tidak ada jadwal apel sore hari ini' . "\n",
-            ]);
-        }
-
-        $hari_libur = KalendarLibur::where('tgl', date('Y-m-d'))->first();
-
-        if ($hari_libur != null) {
-            return response()->json([
-                'message' => 'Hari Ini Libur Apel',
-            ]);
-        }
-
-        // cek batas apel sore
-        if ($jadwal_apel->apel_sore == 1 && time() < strtotime($jadwal_apel->jam_apel_sore)) {
-            return response()->json([
-                'message' => 'Minimal Jam Apel Sore' . date("H:i", strtotime($jadwal_apel->jam_apel_sore)) . "\n",
-            ]);
-        }
-        if ($jadwal_apel->apel_sore == 1 && time() > strtotime($jadwal_apel->max_apel_sore)) {
-            return response()->json([
-                'message' => 'Anda melebihi batas maksimal jam apel sore' . "\n",
-            ]);
-        }
-
-        // cek presensi apel
-        $presensi_apel = AttendancesPegawai::where([
-            'pegawai_id' => $request->user()->id,
-            'dinas_id' => $request->user()->dinas_id,
-            'date_attendance'     => date('Y-m-d')
-        ])->first();
-
-        if ($presensi_apel === null) {
-            return response()->json([
-                'message' => 'Anda Belum Melakukan Presensi Masuk'
-            ]);
-        }
-
-        // cek presensi apel sore
-        if ($presensi_apel !== null && $presensi_apel->status_apel_sore !== null && trim($presensi_apel->status_apel_sore !== '')) {
-            return response()->json([
-                'message' => 'Anda Sudah Presensi Apel Sore'
-            ]);
-        }
-
-        DB::beginTransaction();
         try {
-
-
-            $absen = AttendancesPegawai::updateOrCreate(
-                [
-                    'pegawai_id' => $request->user()->id,
-                    'dinas_id' => $request->user()->dinas_id,
-                    'date_attendance' => date('Y-m-d')
-                ],
-                [
-                    'dinas_id' => $request->user()->dinas_id,
-                    'status_apel' => "Hadir",
-                    'potongan_tidak_apel' => 0,
-                    'potongan_tidak_apel_persen' => 0,
-                    'status_apel_sore' => "Hadir",
-                    'potongan_tidak_apel_sore' => 0,
-                    'potongan_tidak_apel_sore_persen' => 0,
-                    // 'foto_apel_sore_path' => $path,
-                    // 'foto_apel_sore' => $attachment
-                ]
-            );
-            $message = 'Presensi Apel Sore Berhasil';
-
-
-            DB::commit();
+            $absen = $service->apel($request->user(), 'sore');
             return response()->json([
-                'message' => $message,
-                'id_absen'  => $absen->id
+                'message' => 'Presensi Apel Sore Berhasil',
+                'id_absen' => $absen->id
             ]);
-        } catch (\Throwable $throw) {
-            DB::rollBack();
-            $response = response()->json(['error' => $throw->getMessage()]);
+        } catch (\App\Exceptions\ApiException $e) {
             return response()->json([
-                'message' => $response
+                'message' => $e->getMessage()
             ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Terjadi kesalahan sistem'
+            ], 500);
         }
     }
 

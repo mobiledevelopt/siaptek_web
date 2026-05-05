@@ -10,7 +10,7 @@ class AttendanceCalculator
     {
         $now = Carbon::now();
         $jamMasuk = $now->copy()->setTimeFromTimeString($jadwal->jam_masuk); // pakai tanggal sekarang
-        $menit = max(0, $now->diffInMinutes($jamMasuk)); // diff positif
+        $menit = $now->gt($jamMasuk) ? $now->diffInMinutes($jamMasuk) : 0;
         
         $status = 'Masuk';
         $persenPotong = 0;

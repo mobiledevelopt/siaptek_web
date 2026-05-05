@@ -166,4 +166,24 @@ class AttendanceValidator
 
         return [$jadwal, $jmlHariKerja, $potonganTpp];
     }
+
+    public static function sedangIzin($user)
+    {
+        $today = Carbon::today()->toDateString();
+        
+        $izin = \App\Models\IzinPegawai::where('pegawai_id', $user->id)
+            ->whereDate('tgl', '<=', $today)
+            ->whereDate('sampai_tgl', '>=', $today)
+            ->whereIn('status', ['Pengajuan', 'Di Terima'])
+            ->first();
+
+        if ($izin) {
+            $statusText = $izin->status === 'Di Terima' ? 'telah disetujui' : 'sedang dalam proses pengajuan';
+            throw new ApiException(
+                "Anda tidak bisa presensi karena sedang izin/cuti ($statusText)",
+                422,
+                'ALREADY_ON_LEAVE'
+            );
+        }
+    }
 }

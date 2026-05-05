@@ -167,6 +167,6 @@ trait CronTestSetup
 
     protected function runCron()
     {
-        $this->artisan('absen:cron-new');
+        $this->artisan('absen:cron');
     }
 }
