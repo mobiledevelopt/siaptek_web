@@ -109,8 +109,10 @@ class PresensiReminder extends Command
         $now = now();
         $jadwal = \Carbon\Carbon::parse($time);
 
-        echo "Checking $type at $time, now is ".$now->format('H:i')."\n";
-        if ($now->between($jadwal, $jadwal->copy()->addMinute())) {
+        // Kirim notif 5 menit sebelum jadwal
+        $reminderTime = $jadwal->copy()->subMinutes(5);
+
+        if ($now->between($reminderTime, $reminderTime->copy()->addMinute())) {
 
             $cacheKey = "notif_presensi_".$logPrefix."_".date('Y-m-d');
 
