@@ -245,7 +245,7 @@ class DaftarHadirApelController extends Controller
             ]);
         } catch (\Exception $e) {
             return response()->json([
-                'message' => 'Terjadi kesalahan sistem'
+                'message' => 'Terjadi kesalahan sistem' . $e->getMessage()
             ], 500);
         }
     }
@@ -264,7 +264,7 @@ class DaftarHadirApelController extends Controller
             ]);
         } catch (\Exception $e) {
             return response()->json([
-                'message' => 'Terjadi kesalahan sistem'
+                'message' => 'Terjadi kesalahan sistem' . $e->getMessage()
             ], 500);
         }
     }
