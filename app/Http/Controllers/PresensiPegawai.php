@@ -420,6 +420,7 @@ class PresensiPegawai extends Controller
 
         if (($user->role_id ?? null) != 1) {
             $data = $this->initData($start, $end, $user->dinas_id ?? null, null, $status);
+            // $data = $this->initDataRekap($start, $end, $user->dinas_id, $status);
         } else {
             $data = $this->initDataRekap($start, $end, $dinas, $status);
         }
@@ -746,7 +747,7 @@ class PresensiPegawai extends Controller
             }
         }
 
-        // $data = $this->initDataRekap($start, $end, $dinas_id, $status);
+        $data = $this->initDataRekap($start, $end, $dinas_id, $status);
         // dd($data);
         $col_start = 5;
         $count = 0;
