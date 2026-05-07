@@ -4,6 +4,7 @@ namespace App\Console;
 
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class Kernel extends ConsoleKernel
@@ -29,6 +30,34 @@ class Kernel extends ConsoleKernel
         $schedule->command('app:move-compress-image')->timezone('Asia/jakarta')->everyMinute();
 
         $schedule->command('app:presensi-reminder')->everyMinute();
+
+        // Cleanup: Hapus data > 1 bulan dari Pulse, Telescope & Personal Access Tokens (setiap hari jam 01:00 WIB)
+        $schedule->call(function () {
+            $oneMonthAgo = now()->subMonth();
+            $oneMonthAgoTimestamp = $oneMonthAgo->timestamp;
+
+            // Pulse (kolom timestamp berupa unix timestamp integer)
+            DB::table('pulse_entries')->where('timestamp', '<', $oneMonthAgoTimestamp)->delete();
+            DB::table('pulse_aggregates')->where('bucket', '<', $oneMonthAgoTimestamp)->delete();
+            DB::table('pulse_values')->where('timestamp', '<', $oneMonthAgoTimestamp)->delete();
+
+            // Telescope (kolom created_at berupa datetime)
+            $oldEntryUuids = DB::table('telescope_entries')
+                ->where('created_at', '<', $oneMonthAgo)
+                ->pluck('uuid');
+
+            if ($oldEntryUuids->isNotEmpty()) {
+                DB::table('telescope_entries_tags')->whereIn('entry_uuid', $oldEntryUuids)->delete();
+                DB::table('telescope_entries')->where('created_at', '<', $oneMonthAgo)->delete();
+            }
+
+            // Personal Access Tokens (kolom created_at)
+            DB::table('personal_access_tokens')->where('created_at', '<', $oneMonthAgo)->delete();
+
+            Log::info("Cleanup: data > 1 bulan dihapus dari pulse, telescope & personal_access_tokens.");
+        })->timezone('Asia/Jakarta')->dailyAt('01:00')
+          ->name('cleanup-pulse-telescope-tokens')
+          ->withoutOverlapping();
     }
 
     /**
