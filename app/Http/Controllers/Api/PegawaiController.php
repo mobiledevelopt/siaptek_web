@@ -633,7 +633,7 @@ class PegawaiController extends Controller
                 ->sum('tpp_diterima');
 
             // Menambahkan versi ke dalam data user
-            $user->versi = '1.0.2';
+            $user->versi = $versi;
 
             $jam = JamAbsen::orderBy('id', 'ASC')->get()->map(function ($dat) {
                 $dat->jam_masuk = date('H:i', strtotime($dat->jam_masuk));
