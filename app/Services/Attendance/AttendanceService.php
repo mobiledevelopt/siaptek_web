@@ -100,7 +100,7 @@ class AttendanceService
 
         $jadwalApel = AttendanceCache::jadwalApel(
             $user->dinas_id,
-            now()->dayOfWeekIso
+            now()->dayOfWeek
         );
 
         AttendanceValidator::apel($jadwalApel, $type);

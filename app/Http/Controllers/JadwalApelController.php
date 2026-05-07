@@ -189,9 +189,8 @@ class JadwalApelController extends Controller
                 ]);
                 DB::commit();
 
-                // Clear cache via Service (untuk hari yang diupdate & hari ini)
-                AttendanceCache::clearJadwalApel($data->dinas_id, $data->hari);
-                AttendanceCache::clearJadwalApel($data->dinas_id, \Carbon\Carbon::now()->dayOfWeek);
+                // Clear cache via Service (Hapus semua hari untuk dinas ini agar pasti bersih)
+                AttendanceCache::clearJadwalApel($data->dinas_id);
 
                 $response = response()->json($this->responseStore(true, NULL, route('jadwal-apel.index')));
             } catch (\Throwable $throw) {

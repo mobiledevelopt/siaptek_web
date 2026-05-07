@@ -4,20 +4,23 @@ namespace App\Services\Attendance;
 
 use App\Models\{JamAbsen, ConfigPotTpp, Dinas, JadwalApel, Jml_hari_kerja};
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 class AttendanceCache
 {
     public static function jadwal()
     {
-        $day = Carbon::now()->dayOfWeek;
-
-        $jadwalId = $day <= 4 ? 1 : 2;
+        $day = (string) Carbon::now()->dayOfWeek;
+        $jadwalId = (int)$day <= 4 ? 1 : 2;
 
         return Cache::remember(
             "jam_absen_$day",
             now()->addHour(),
-            fn () => JamAbsen::find($jadwalId)
+            function () use ($day, $jadwalId) {
+                Log::info("Cache MISS: jam_absen_$day (generating new data)");
+                return JamAbsen::find($jadwalId);
+            }
         );
     }
 
@@ -56,12 +59,15 @@ class AttendanceCache
 
     public static function jadwalApel($dinasId, $day = null)
     {
-        $day = $day ?? Carbon::now()->dayOfWeek;
+        $day = (string) ($day ?? Carbon::now()->dayOfWeek);
 
         return Cache::remember(
             "jadwal_apel_{$dinasId}_$day",
             now()->addHour(),
-            fn () => JadwalApel::where(['dinas_id' => $dinasId, 'hari' => $day])->first()
+            function () use ($dinasId, $day) {
+                Log::info("Cache MISS: jadwal_apel_{$dinasId}_$day (generating new data)");
+                return JadwalApel::where(['dinas_id' => $dinasId, 'hari' => $day])->first();
+            }
         );
     }
     
@@ -81,6 +87,7 @@ class AttendanceCache
     public static function clearJadwal()
     {
         for ($i = 0; $i <= 6; $i++) {
+            Log::info("Cache FORGET: jam_absen_$i");
             Cache::forget("jam_absen_$i");
         }
     }
@@ -103,10 +110,12 @@ class AttendanceCache
     public static function clearJadwalApel($dinasId, $day = null)
     {
         if ($day !== null) {
+            Log::info("Cache FORGET: jadwal_apel_{$dinasId}_$day");
             Cache::forget("jadwal_apel_{$dinasId}_$day");
         } else {
             // Jika day null, clear semua hari untuk dinas tersebut
             for ($i = 0; $i <= 6; $i++) {
+                Log::info("Cache FORGET: jadwal_apel_{$dinasId}_$i");
                 Cache::forget("jadwal_apel_{$dinasId}_$i");
             }
         }
