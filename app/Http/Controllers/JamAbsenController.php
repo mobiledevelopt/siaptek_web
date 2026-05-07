@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\JamAbsen;
+use App\Services\Attendance\AttendanceCache;
 use App\Traits\ResponseStatus;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\Facades\DataTables;
@@ -124,6 +126,10 @@ class JamAbsenController extends Controller
                     'max_pulang' => $request->max_pulang
                 ]);
                 DB::commit();
+
+                // Clear cache via Service
+                AttendanceCache::clearJadwal();
+
                 $response = response()->json($this->responseStore(true, NULL, route('jam-absen.index')));
             } catch (\Throwable $throw) {
                 DB::rollBack();

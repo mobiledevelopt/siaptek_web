@@ -56,7 +56,7 @@ class AttendanceCache
 
     public static function jadwalApel($dinasId, $day = null)
     {
-        $day = $day ?? Carbon::now()->dayOfWeekIso;
+        $day = $day ?? Carbon::now()->dayOfWeek;
 
         return Cache::remember(
             "jadwal_apel_{$dinasId}_$day",
@@ -67,13 +67,48 @@ class AttendanceCache
     
     public static function isLibur()
     {
-        $day = Carbon::now()->dayOfWeekIso;
+        $day = Carbon::now()->dayOfWeek;
 
         return Cache::remember(
             "is_libur_$day",
             now()->addHour(),
-            fn () => !in_array($day, [1, 2, 3, 4, 5])
+            fn () => in_array($day, [0, 6])
         );
     }
-    
+
+    // --- Invalidation Methods ---
+
+    public static function clearJadwal()
+    {
+        for ($i = 0; $i <= 6; $i++) {
+            Cache::forget("jam_absen_$i");
+        }
+    }
+
+    public static function clearPotonganTpp()
+    {
+        Cache::forget('config_pot_tpp');
+    }
+
+    public static function clearDinas($id)
+    {
+        Cache::forget("dinas_$id");
+    }
+
+    public static function clearJmlHariKerja($bulan, $tahun)
+    {
+        Cache::forget("jml_hari_kerja_{$bulan}_{$tahun}");
+    }
+
+    public static function clearJadwalApel($dinasId, $day = null)
+    {
+        if ($day !== null) {
+            Cache::forget("jadwal_apel_{$dinasId}_$day");
+        } else {
+            // Jika day null, clear semua hari untuk dinas tersebut
+            for ($i = 0; $i <= 6; $i++) {
+                Cache::forget("jadwal_apel_{$dinasId}_$i");
+            }
+        }
+    }
 }

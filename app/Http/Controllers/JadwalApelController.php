@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Dinas;
 use App\Models\JadwalApel;
+use App\Services\Attendance\AttendanceCache;
 use App\Traits\ResponseStatus;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\Facades\DataTables;
@@ -186,6 +188,11 @@ class JadwalApelController extends Controller
                     'longitude_2' => $request->longitude_2,
                 ]);
                 DB::commit();
+
+                // Clear cache via Service (untuk hari yang diupdate & hari ini)
+                AttendanceCache::clearJadwalApel($data->dinas_id, $data->hari);
+                AttendanceCache::clearJadwalApel($data->dinas_id, \Carbon\Carbon::now()->dayOfWeek);
+
                 $response = response()->json($this->responseStore(true, NULL, route('jadwal-apel.index')));
             } catch (\Throwable $throw) {
                 DB::rollBack();

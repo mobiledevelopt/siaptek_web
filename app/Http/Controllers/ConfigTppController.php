@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\ConfigPotTpp;
+use App\Services\Attendance\AttendanceCache;
 use App\Traits\ResponseStatus;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
 
@@ -101,6 +103,10 @@ class ConfigTppController extends Controller
                 'persentase_potongan' => $request->persentase_potongan,
             ]);
             DB::commit();
+
+            // Clear cache via Service
+            AttendanceCache::clearPotonganTpp();
+
             $response = response()->json($this->responseStore(true, NULL, route('config-tpp.index')));
         } catch (\Throwable $throw) {
             DB::rollBack();

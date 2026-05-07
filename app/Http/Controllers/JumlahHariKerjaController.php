@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\AttendancesPegawai;
 use App\Models\Jml_hari_kerja;
+use App\Services\Attendance\AttendanceCache;
 use App\Traits\ResponseStatus;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\Facades\DataTables;
@@ -93,6 +95,10 @@ class JumlahHariKerjaController extends Controller
                     'jml_hari_kerja' => $request->jml_hari_kerja,
                 ]);
                 DB::commit();
+
+                // Clear cache via Service
+                AttendanceCache::clearJmlHariKerja($bln_thun_explode[0], $bln_thun_explode[1]);
+
                 $response = response()->json($this->responseStore(true, NULL, route('jumlah-hari-kerja.index')));
             } catch (\Throwable $throw) {
                 DB::rollBack();
@@ -249,6 +255,10 @@ class JumlahHariKerjaController extends Controller
                 }
 
                 DB::commit();
+
+                // Clear cache via Service
+                AttendanceCache::clearJmlHariKerja($bln_thun_explode[0], $bln_thun_explode[1]);
+
                 $response = response()->json($this->responseStore(true, NULL, route('jumlah-hari-kerja.index')));
             } catch (\Throwable $throw) {
                 DB::rollBack();
@@ -270,6 +280,8 @@ class JumlahHariKerjaController extends Controller
         DB::beginTransaction();
         try {
             if ($data->delete()) {
+                // Clear cache via Service
+                AttendanceCache::clearJmlHariKerja($data->bulan, $data->tahun);
                 $response = response()->json($this->responseDelete(true));
             }
             DB::commit();

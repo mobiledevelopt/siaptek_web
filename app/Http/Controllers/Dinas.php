@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Dinas as ModelsDinas;
 use App\Models\JadwalApel;
+use App\Services\Attendance\AttendanceCache;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Yajra\DataTables\Facades\DataTables;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\View\View;
@@ -157,6 +159,10 @@ class Dinas extends Controller
                 }
 
                 DB::commit();
+
+                // Clear cache via Service
+                AttendanceCache::clearDinas($row->id);
+
                 $response = response()->json($this->responseStore(true, NULL, route('web-dinas.index')));
             } catch (\Throwable $throw) {
                 DB::rollBack();
@@ -208,6 +214,10 @@ class Dinas extends Controller
                 $data->update($data_update);
 
                 DB::commit();
+
+                // Clear cache via Service
+                AttendanceCache::clearDinas($id);
+
                 $response = response()->json($this->responseStore(true, NULL, route('web-dinas.index')));
             } catch (\Throwable $throw) {
                 DB::rollBack();
