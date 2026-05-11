@@ -28,27 +28,35 @@ class MoveCompressImage extends Command
      */
     public function handle()
     {
-        Log::info("app:move-compress-image RUN CRON");
-        $attendances = AttendancesPegawai::where('date_attendance', date('Y-m-d'))->where('status', 'Masuk')->get();
-        Log::info("attendances count".$attendances->count());
-        foreach ($attendances as $item) {
-            // Check and save images for each path
-            $this->processImage($item->foto_absen_masuk_path, "temp");
-            $this->processImage($item->foto_absen_pulang_path, "temp");
-            $this->processImage($item->foto_apel_pagi_path, "temp");
-            $this->processImage($item->foto_apel_sore_path, "temp");
-        }
+        // Log::info("app:move-compress-image RUN CRON");
+        AttendancesPegawai::where('date_attendance', date('Y-m-d'))
+            ->where('status', 'Masuk')
+            ->chunk(100, function ($attendances) {
+                Log::info("attendances chunk count " . $attendances->count());
+                foreach ($attendances as $item) {
+                    // Check and save images for each path
+                    $this->processImage($item->foto_absen_masuk_path, "temp");
+                    $this->processImage($item->foto_absen_pulang_path, "temp");
+                    $this->processImage($item->foto_apel_pagi_path, "temp");
+                    $this->processImage($item->foto_apel_sore_path, "temp");
+                }
+            });
     }
 
     private function processImage($imagePath, $tempPath)
     {
         if ($imagePath != null) {
-            [$pathFile, $fileName] = explode('/', $imagePath);
+            $parts = explode('/', $imagePath);
+            if (count($parts) < 2) return;
+            [$pathFile, $fileName] = $parts;
+            
             $fullPath = storage_path("app/public/{$pathFile}/{$fileName}");
+            $tempFullPath = storage_path("app/public/{$tempPath}/{$fileName}");
+
             if (!file_exists($fullPath)) {
-                Log::info("SaveImageJob");
-                $save = SaveImageJob::dispatch("{$tempPath}/{$fileName}", "{$pathFile}/{$fileName}", $fileName, $tempPath);
-                Log::info("SaveImageJob", ['save' => $save]);
+                if (file_exists($tempFullPath)) {
+                    SaveImageJob::dispatch("{$tempPath}/{$fileName}", "{$pathFile}/{$fileName}", $fileName, $tempPath);
+                }
             }
         }
     }

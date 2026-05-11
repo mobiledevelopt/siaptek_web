@@ -33,7 +33,7 @@ class PresensiReminder extends Command
      */
     public function handle()
     {
-        Log::info("Attendance Reminder");
+        // Log::info("Attendance Reminder");
 
         // skip sabtu minggu
         if (in_array(date('w'), [0, 6])) {
