@@ -11,15 +11,11 @@ class Pegawai extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
-    protected $table = 'pegawai';
-    
     /**
      * The attributes that are mass assignable.
      *
      * @var array<int, string>
      */
-
-    use HasFactory;
     protected $table = 'pegawai';
     public $incrementing = false;
     protected $keyType = 'string';
