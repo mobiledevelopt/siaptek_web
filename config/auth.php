@@ -41,12 +41,12 @@ return [
             'provider' => 'users',
         ],
         'pegawai' => [
-            'driver' => 'jwt',
+            'driver' => 'session',
             'provider' => 'pegawai',
         ],
-        // JWT GUARD (UNTUK API)
+        // SANCTUM GUARD (UNTUK API)
         'api' => [
-            'driver' => 'jwt',
+            'driver' => 'sanctum',
             'provider' => 'pegawai',
         ],
     ],

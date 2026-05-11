@@ -7,21 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Foundation\Auth\User as Authenticatable;
-use Tymon\JWTAuth\Contracts\JWTSubject;
-
-class Pegawai extends Authenticatable implements JWTSubject
+class Pegawai extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
-    public function getJWTIdentifier()
-    {
-        return $this->getKey();
-    }
-
-    public function getJWTCustomClaims()
-    {
-        return [];
-    }
+    protected $table = 'pegawai';
     
     /**
      * The attributes that are mass assignable.

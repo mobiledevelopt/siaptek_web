@@ -627,18 +627,22 @@ class PegawaiController extends Controller
             // Menghitung total TPP diterima berdasarkan rentang tanggal bulan ini
             $from = Carbon::now()->startOfMonth()->toDateString();
             $to = Carbon::now()->endOfMonth()->toDateString();
-            $tpp = 0;
-            $tpp = AttendancesPegawai::where('pegawai_id', $user->id)
-                ->whereBetween('date_attendance', [$from, $to])
-                ->sum('tpp_diterima');
+            // Cache TPP selama 10 menit agar tidak memberatkan database
+            $tpp = Cache::remember("tpp_sum_{$user->id}_{$from}_{$to}", now()->addMinutes(10), function () use ($user, $from, $to) {
+                return AttendancesPegawai::where('pegawai_id', $user->id)
+                    ->whereBetween('date_attendance', [$from, $to])
+                    ->sum('tpp_diterima');
+            });
 
             // Menambahkan versi ke dalam data user
             $user->versi = $versi;
 
-            $jam = JamAbsen::orderBy('id', 'ASC')->get()->map(function ($dat) {
-                $dat->jam_masuk = date('H:i', strtotime($dat->jam_masuk));
-                $dat->jam_pulang = date('H:i', strtotime($dat->jam_pulang));
-                return $dat;
+            $jam = Cache::remember('jam_absen_sync', now()->addHour(), function() {
+                return JamAbsen::orderBy('id', 'ASC')->get()->map(function ($dat) {
+                    $dat->jam_masuk = date('H:i', strtotime($dat->jam_masuk));
+                    $dat->jam_pulang = date('H:i', strtotime($dat->jam_pulang));
+                    return $dat;
+                });
             });
 
             return response()->json([
@@ -699,8 +703,11 @@ class PegawaiController extends Controller
             if (!is_null($user->foto_profile)) {
                 $this->deleteFile($user->foto_profile_path);
             }
-            $data = Pegawai::where('id', $request->user()->id)
+            Pegawai::where('id', $request->user()->id)
                 ->update(['foto_profile' => url('/storage/') . '/' . $path, 'foto_profile_path' => $path]);
+            
+            // Hapus cache agar data terbaru langsung muncul di sync
+            Cache::forget("pegawai_{$request->user()->id}");
         }
 
         return response()->json([
@@ -735,6 +742,9 @@ class PegawaiController extends Controller
 
 
         Pegawai::where('id', $request->user()->id)->update(['password' => Hash::make($request->password)]);
+        
+        // Hapus cache agar data terbaru langsung muncul di sync
+        Cache::forget("pegawai_{$request->user()->id}");
 
 
         return response()->json([
@@ -810,6 +820,9 @@ class PegawaiController extends Controller
         } else {
             $teacher->update($data);
         }
+
+        // Hapus cache agar data terbaru langsung muncul di sync
+        Cache::forget("pegawai_{$teacher->id}");
 
         return response()->json([
             'message' => 'Profile Berhasil di Update',
