@@ -21,15 +21,16 @@ class AttendanceCronHandler
         $config = $this->config();
 
         $absen = AttendanceRepository::today($user->id);
+        // $absen = AttendanceRepository::fromDate($user->id, '2026-05-12');
 
-        // Jika tidak ada absen → alpha
-        if (!$absen || empty($absen->incoming_time)) {
-            return $this->handleAlpha($user, $config);
+        // Skip non-working (Cuti, Izin) DULUAN agar tidak tertimpa Alpha
+        if ($absen && $this->isNonWorkingStatus($absen)) {
+            return true;
         }
 
-        // Skip non-working
-        if ($this->isNonWorkingStatus($absen)) {
-            return true;
+        // Jika tidak ada absen ATAU absen kosong tapi bukan cuti → alpha
+        if (!$absen || empty($absen->incoming_time) || $absen->incoming_time === '00:00:00') {
+            return $this->handleAlpha($user, $config);
         }
 
         return $this->handleIncomplete($absen, $user, $config);
@@ -65,7 +66,7 @@ class AttendanceCronHandler
     {
         $status = strtolower(trim($absen->status ?? ''));
 
-        return in_array($status, ['izin', 'cuti']);
+        return in_array($status, ['izin', 'cuti', 'dinas luar']);
     }
 
     protected function handleIncomplete($absen, $user, $config)
@@ -79,6 +80,8 @@ class AttendanceCronHandler
         PotonganLogger::logFromCalculator($absen, $user, $calc);
 
         $isFriday = now()->dayOfWeekIso === 5;
+        $hadirApelPagi = !empty($absen->apel_pagi_at) || strtolower(trim($absen->status_apel_pagi ?? '')) === 'hadir';
+        $hadirApelSore = !empty($absen->apel_sore_at) || strtolower(trim($absen->status_apel_sore ?? '')) === 'hadir';
 
         $data = [
             // ======================
@@ -94,23 +97,28 @@ class AttendanceCronHandler
             'potongan_absen_masuk' => $calc['potongan']['telat']['final'],
             'potongan_absen_pulang' => $calc['potongan']['pulang']['final'],
             'potongan_tidak_apel_pagi' => $calc['potongan']['apel_pagi']['final'],
+            'potongan_tidak_apel_pagi_persen' => $calc['potongan']['apel_pagi']['persen'] ?? 0,
             'potongan_tidak_apel_sore' => $calc['potongan']['apel_sore']['final'],
+            'potongan_tidak_apel_sore_persen' => $calc['potongan']['apel_sore']['persen'] ?? 0,
+            
+            // Kolom Legacy / Total Apel
+            'potongan_tidak_apel' => $calc['potongan']['apel_pagi']['final'] + $calc['potongan']['apel_sore']['final'],
+            'potongan_tidak_apel_persen' => ($calc['potongan']['apel_pagi']['persen'] ?? 0) + ($calc['potongan']['apel_sore']['persen'] ?? 0),
 
             // ======================
             // STATUS (DERIVED, NOT SOURCE)
             // ======================
-            'status_apel_pagi' => empty($absen->apel_pagi_at)
-                ? $config['configTpp']['apel']->title
-                : $absen->status_apel_pagi,
+            'status_apel_pagi' => $hadirApelPagi 
+                ? 'Hadir' 
+                : $config['configTpp']['apel']->title,
 
-            'status_apel_sore' => ($isFriday && empty($absen->apel_sore_at))
-                ? $config['configTpp']['apel']->title
+            'status_apel_sore' => $isFriday 
+                ? ($hadirApelSore ? 'Hadir' : $config['configTpp']['apel']->title)
                 : $absen->status_apel_sore,
 
-            'status_apel' => (
-                empty($absen->apel_pagi_at) ||
-                ($isFriday && empty($absen->apel_sore_at))
-            ) ? $config['configTpp']['apel']->title : $absen->status_apel,
+            'status_apel' => ($hadirApelPagi && (!$isFriday || $hadirApelSore))
+                ? 'Hadir' 
+                : $config['configTpp']['apel']->title,
 
             'status_pulang' => (
                 empty($absen->outgoing_time) ||

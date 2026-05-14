@@ -531,6 +531,35 @@ class PegawaiController extends Controller
             return response()->json(['message' => 'Absen tidak ditemukan'], 404);
         }
 
+        //cek apakah sudah ada fotonya
+        switch ($request->jenis) {
+            case 'masuk':
+                if ($absen->foto_absen_masuk) {
+                    return response()->json(['message' => 'Foto absen masuk sudah ada'], 422);
+                }
+                break;
+
+            case 'pulang':
+                if ($absen->foto_absen_pulang) {
+                    return response()->json(['message' => 'Foto absen pulang sudah ada'], 422);
+                }
+                break;
+
+            case 'apel_pagi':
+                if ($absen->foto_apel_pagi) {
+                    return response()->json(['message' => 'Foto apel pagi sudah ada'], 422);
+                }
+                break;
+            case 'apel_sore':
+                if ($absen->foto_apel_sore) {
+                    return response()->json(['message' => 'Foto apel sore sudah ada'], 422);
+                }
+                break;
+            default:
+                return response()->json(['message' => 'Jenis foto tidak valid'], 422);
+        }
+
+        Log::info("Image uploadFoto: {$request->id_absen} | {$request->jenis}");
         $upload = $this->saveImageNew($request->file('file'), 'presensi_pegawai_upload', 'temp');
 
         $path = $upload[0];
@@ -1027,7 +1056,7 @@ class PegawaiController extends Controller
         $path = $folder . '/' . $imageName;
         $tempPath = $image->storeAs($tempFolder, $imageName, 'public');
 
-        Log::info("Image saved successfully: {$imageName}");
+        // Log::info("Image saved successfully: {$imageName}");
 
 
 

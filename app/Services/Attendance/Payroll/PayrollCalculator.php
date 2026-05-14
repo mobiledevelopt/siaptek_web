@@ -27,7 +27,7 @@ class PayrollCalculator
         // ======================
         // RULE 2: TIDAK MASUK = POTONG 100%
         // ======================
-        if (empty($absen->incoming_time)) {
+        if (empty($absen->incoming_time) || $absen->incoming_time === '00:00:00') {
             return [
                 'tunjangan' => $tunjangan,
                 'potongan' => [
@@ -60,11 +60,13 @@ class PayrollCalculator
         $cfgApel = $config['configTpp']['apel'];
         $persen = $isFriday ? $cfgApel->persentase_potongan / 2 : $cfgApel->persentase_potongan;
 
-        if (empty($absen->apel_pagi_at)) {
+        $hadirApelPagi = !empty($absen->apel_pagi_at) || strtolower(trim($absen->status_apel_pagi ?? '')) === 'hadir';
+        if (!$hadirApelPagi) {
             $apelPagi = $this->potong($tunjangan, 0.4, $persen);
         }
 
-        if ($isFriday && empty($absen->apel_sore_at)) {
+        $hadirApelSore = !empty($absen->apel_sore_at) || strtolower(trim($absen->status_apel_sore ?? '')) === 'hadir';
+        if ($isFriday && !$hadirApelSore) {
             $apelSore = $this->potong($tunjangan, 0.4, $persen);
         }
 

@@ -13,6 +13,13 @@ class AttendanceRepository
             ->first();
     }
 
+    public static function fromDate($pegawaiId, $date)
+    {
+        return AttendancesPegawai::where('pegawai_id', $pegawaiId)
+            ->whereDate('date_attendance', $date)
+            ->first();
+    }
+
     public static function createClockIn($user, $jadwal, $telat, $status, $potonganTpp = 0, $tppDiterima = 0)
     {
         return AttendancesPegawai::create([

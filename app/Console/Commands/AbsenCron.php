@@ -21,21 +21,29 @@ class AbsenCron extends Command
      *
      * @var string
      */
-    protected $signature = 'absen:cron';
+    protected $signature = 'absen:cron {date?}';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Command description';
+    protected $description = 'Run attendance cron, optionally for a specific date (Y-m-d)';
 
     /**
      * Execute the console command.
      */
     public function handle()
     {
-        Log::info("run cron ");
+        $date = $this->argument('date');
+        
+        if ($date) {
+            Log::info("run cron manual for date: " . $date);
+            \Carbon\Carbon::setTestNow(\Carbon\Carbon::parse($date));
+        } else {
+            Log::info("run cron today");
+        }
+
         app(\App\Services\Attendance\AttendanceCronService::class)->run();
     }
 }

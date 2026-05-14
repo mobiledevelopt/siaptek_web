@@ -18,7 +18,7 @@ class AttendanceCache
             "jam_absen_$day",
             now()->addHour(),
             function () use ($day, $jadwalId) {
-                Log::info("Cache MISS: jam_absen_$day (generating new data)");
+                // Log::info("Cache MISS: jam_absen_$day (generating new data)");
                 return JamAbsen::find($jadwalId);
             }
         );
@@ -73,12 +73,18 @@ class AttendanceCache
     
     public static function isLibur()
     {
-        $day = Carbon::now()->dayOfWeek;
+        $today = Carbon::now();
+        $dateStr = $today->toDateString();
 
         return Cache::remember(
-            "is_libur_$day",
+            "is_libur_{$dateStr}",
             now()->addHour(),
-            fn () => in_array($day, [0, 6])
+            function () use ($today) {
+                if ($today->isWeekend()) {
+                    return true;
+                }
+                return \App\Models\KalendarLibur::whereDate('tgl', $today)->exists();
+            }
         );
     }
 

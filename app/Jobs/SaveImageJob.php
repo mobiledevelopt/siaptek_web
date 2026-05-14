@@ -59,6 +59,16 @@ class SaveImageJob implements ShouldQueue
 
         } catch (\Exception $e) {
             Log::error("Error processing image move compress: {$this->imageName}. Error: {$e->getMessage()} .Path: ". storage_path("app/public/{$this->path}"));
+            
+            // Fallback: just move the file without processing to prevent infinite loop in cron
+            try {
+                if (Storage::disk('public')->exists($this->path)) {
+                    Storage::disk('public')->copy($this->path, $this->pathFolder);
+                    Storage::disk('public')->delete($this->path);
+                }
+            } catch (\Exception $e2) {
+                Log::error("Fallback move failed: " . $e2->getMessage());
+            }
         }
             
         

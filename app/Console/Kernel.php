@@ -52,8 +52,9 @@ class Kernel extends ConsoleKernel
             }
 
             // Personal Access Tokens (kolom created_at)
-            DB::table('personal_access_tokens')->where('created_at', '<', $oneMonthAgo)->delete();
-
+            // DB::table('personal_access_tokens')->where('created_at', '<', $oneMonthAgo)->delete();
+            DB::table('personal_access_tokens')->where('last_used_at' , '<', $oneMonthAgo)->delete();
+            
             Log::info("Cleanup: data > 1 bulan dihapus dari pulse, telescope & personal_access_tokens.");
         })->timezone('Asia/Jakarta')->dailyAt('01:00')
           ->name('cleanup-pulse-telescope-tokens')
