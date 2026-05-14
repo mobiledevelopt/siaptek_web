@@ -39,6 +39,8 @@ class MoveCompressImage extends Command
                     $this->processImage($item->foto_absen_pulang_path, "temp");
                     $this->processImage($item->foto_apel_pagi_path, "temp");
                     $this->processImage($item->foto_apel_sore_path, "temp");
+                    $this->processImage($item->foto_apel_pagi_path, "temp_apel");
+                    $this->processImage($item->foto_apel_sore_path, "temp_apel");
                 }
             });
     }
