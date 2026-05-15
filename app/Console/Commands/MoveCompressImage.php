@@ -14,42 +14,109 @@ class MoveCompressImage extends Command
      *
      * @var string
      */
-    protected $signature = 'app:move-compress-image';
+    protected $signature = 'app:move-compress-image {date? : Tanggal spesifik (Y-m-d), "backfill" untuk semua hari yang belum diproses, atau kosong untuk hari ini}';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Command description';
+    protected $description = 'Move & compress attendance images. Supports today (default), specific date, or backfill for all past unprocessed dates.';
 
     /**
      * Execute the console command.
      */
     public function handle()
     {
-        // Log::info("app:move-compress-image RUN CRON");
-        AttendancesPegawai::where('date_attendance', date('Y-m-d'))
-            ->where('status', 'Masuk')
-            ->chunk(100, function ($attendances) {
-                Log::info("attendances chunk count " . $attendances->count());
-                foreach ($attendances as $item) {
-                    // Check and save images for each path
-                    $this->processImage($item->foto_absen_masuk_path, "temp");
-                    $this->processImage($item->foto_absen_pulang_path, "temp");
-                    $this->processImage($item->foto_apel_pagi_path, "temp");
-                    $this->processImage($item->foto_apel_sore_path, "temp");
-                    $this->processImage($item->foto_apel_pagi_path, "temp_apel");
-                    $this->processImage($item->foto_apel_sore_path, "temp_apel");
-                }
-            });
+        $dateArg = $this->argument('date');
+
+        if ($dateArg === 'backfill') {
+            $this->handleBackfill();
+        } elseif ($dateArg) {
+            $this->info("Processing images for date: {$dateArg}");
+            Log::info("app:move-compress-image manual run for date: {$dateArg}");
+            $this->processDate($dateArg);
+        } else {
+            $this->processDate(date('Y-m-d'));
+        }
     }
 
-    private function processImage($imagePath, $tempPath)
+    /**
+     * Process all past dates that still have uncompressed images in temp folders.
+     */
+    private function handleBackfill()
+    {
+        $dates = AttendancesPegawai::where('date_attendance', '<', date('Y-m-d'))
+            ->where('status', 'Masuk')
+            ->where(function ($query) {
+                $query->whereNotNull('foto_absen_masuk_path')
+                      ->orWhereNotNull('foto_absen_pulang_path')
+                      ->orWhereNotNull('foto_apel_pagi_path')
+                      ->orWhereNotNull('foto_apel_sore_path');
+            })
+            ->distinct()
+            ->orderBy('date_attendance', 'asc')
+            ->pluck('date_attendance')
+            ->unique();
+
+        $this->info("Backfill: found {$dates->count()} dates to check.");
+        Log::info("app:move-compress-image backfill: {$dates->count()} dates to check.");
+
+        $totalDispatched = 0;
+
+        foreach ($dates as $date) {
+            $dispatched = $this->processDate($date);
+            $totalDispatched += $dispatched;
+        }
+
+        $this->info("Backfill complete. Total images dispatched: {$totalDispatched}");
+        Log::info("app:move-compress-image backfill complete. Total dispatched: {$totalDispatched}");
+    }
+
+    /**
+     * Process images for a specific date.
+     *
+     * @param string $date Format Y-m-d
+     * @return int Number of images dispatched
+     */
+    private function processDate(string $date): int
+    {
+        $dispatched = 0;
+
+        AttendancesPegawai::where('date_attendance', $date)
+            ->where('status', 'Masuk')
+            ->chunk(100, function ($attendances) use (&$dispatched, $date) {
+                Log::info("move-compress-image [{$date}] chunk count: " . $attendances->count());
+                foreach ($attendances as $item) {
+                    // Check and save images for each path
+                    $dispatched += $this->processImage($item->foto_absen_masuk_path, "temp");
+                    $dispatched += $this->processImage($item->foto_absen_pulang_path, "temp");
+                    $dispatched += $this->processImage($item->foto_apel_pagi_path, "temp");
+                    $dispatched += $this->processImage($item->foto_apel_sore_path, "temp");
+                    $dispatched += $this->processImage($item->foto_apel_pagi_path, "temp_apel");
+                    $dispatched += $this->processImage($item->foto_apel_sore_path, "temp_apel");
+                }
+            });
+
+        if ($dispatched > 0) {
+            $this->info("[{$date}] Dispatched {$dispatched} images for compression.");
+        }
+
+        return $dispatched;
+    }
+
+    /**
+     * Process a single image path.
+     *
+     * @param string|null $imagePath
+     * @param string $tempPath
+     * @return int 1 if dispatched, 0 if skipped
+     */
+    private function processImage($imagePath, $tempPath): int
     {
         if ($imagePath != null) {
             $parts = explode('/', $imagePath);
-            if (count($parts) < 2) return;
+            if (count($parts) < 2) return 0;
             [$pathFile, $fileName] = $parts;
             
             $fullPath = storage_path("app/public/{$pathFile}/{$fileName}");
@@ -58,8 +125,10 @@ class MoveCompressImage extends Command
             if (!file_exists($fullPath)) {
                 if (file_exists($tempFullPath)) {
                     SaveImageJob::dispatch("{$tempPath}/{$fileName}", "{$pathFile}/{$fileName}", $fileName, $tempPath);
+                    return 1;
                 }
             }
         }
+        return 0;
     }
 }
