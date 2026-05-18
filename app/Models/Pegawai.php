@@ -81,6 +81,7 @@ class Pegawai extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
+        'tpp' => 'float',
     ];
 
     public function dinas()

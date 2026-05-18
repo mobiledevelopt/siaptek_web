@@ -6,6 +6,7 @@ use App\Constants\ErrorCode;
 use App\Exceptions\ApiException;
 use App\Models\AttendancesPegawai;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\Log;
 
 class AttendanceService
 {
@@ -28,9 +29,18 @@ class AttendanceService
         $potonganTppConfig = AttendanceCache::potonganTpp()
             ->where('group', 'masuk');
 
+        $tpp = $user->tpp ?? 0.0;
+
+        if ($user->tpp === null) {
+            Log::warning('Pegawai clock in dengan TPP kosong (NULL)', [
+                'userId' => $user->id,
+                'name'   => $user->name,
+            ]);
+        }
+
         [$telat, $status, $potonganTpp, $tppDiterima] = AttendanceCalculator::hitungTelat(
             $jadwal,
-            $user->tpp,
+            $tpp,
             $jmlHariKerja,
             $potonganTppConfig
         );
