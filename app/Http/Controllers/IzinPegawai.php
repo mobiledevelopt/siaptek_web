@@ -45,7 +45,7 @@ class IzinPegawai extends Controller
             $data = ModelsIzinPegawai::with(['jenis_izin', 'pegawai_', 'dinas']);
 
             if ($request->user()->role_id != 1) {
-                $data = ModelsIzinPegawai::where('dinas_id', $request->user()->dinas_id)->with(['jenis_izin', 'pegawai_', 'dinas']);
+                $data = ModelsIzinPegawai::where('izin_pegawai.dinas_id', $request->user()->dinas_id)->with(['jenis_izin', 'pegawai_', 'dinas']);
             } else {
                 $data = ModelsIzinPegawai::with(['jenis_izin', 'pegawai_', 'dinas']);
             }
@@ -57,7 +57,7 @@ class IzinPegawai extends Controller
                 $data->whereDate('tgl', '<=', $request['tgl_akhir']);
             }
             if ($request->filled('dinas')) {
-                $data->where('dinas_id', '=', $request['dinas']);
+                $data->where('izin_pegawai.dinas_id', '=', $request['dinas']);
             }
 
             if ($request->filled('status')) {
@@ -67,6 +67,9 @@ class IzinPegawai extends Controller
             return DataTables::of($data)
                 ->addIndexColumn()
                 ->addColumn('action', function ($row) {
+                    if (!$row->id) {
+                        return '<span class="text-muted">-</span>';
+                    }
                     $actionBtn = '<div class="btn-group dropend">
                             <button type="button" class="btn btn-info dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
                                 Aksi

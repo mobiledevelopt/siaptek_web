@@ -103,15 +103,18 @@
                 },
                 {
                     data: 'jenis_izin.title',
-                    name: 'jenis_izin.title'
+                    name: 'jenis_izin.title',
+                    defaultContent: '-'
                 },
                 {
                     data: 'pegawai_.name',
-                    name: 'pegawai_.name'
+                    name: 'pegawai_.name',
+                    defaultContent: '-'
                 },
                 {
                     data: 'dinas.name',
-                    name: 'dinas.name'
+                    name: 'dinas.name',
+                    defaultContent: '-'
                 },
                 {
                     data: 'status',
