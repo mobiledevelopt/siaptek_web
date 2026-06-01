@@ -155,15 +155,14 @@ class JumlahHariKerjaController extends Controller
                     return response()->json(['message' => "Data Sudah Ada"]);
                 }
                 $data = Jml_hari_kerja::findOrFail($id);
-                $cek_perubahan_jml_hari = $request->jml_hari_kerja != $data->jml_hari_kerja;
                 $data->update([
                     'bulan' => $bln_thun_explode[0],
                     'tahun' => $bln_thun_explode[1],
                     'jml_hari_kerja' => $request->jml_hari_kerja,
                 ]);
 
-                //hitung ulang perhitungan persensi jika jml hari berubah
-                if ($cek_perubahan_jml_hari) {
+                //hitung ulang perhitungan presensi
+                {
                     $data_presensi = AttendancesPegawai::with(['pegawai'])->whereYear('date_attendance', $bln_thun_explode[1])->whereMonth('date_attendance', $bln_thun_explode[0])->get();
                     foreach ($data_presensi as $value) {
 
