@@ -157,7 +157,12 @@ class IzinPegawai extends Controller
                     } else {
 
                         $tunjangan_per_hari = $dataIzin->pegawai_->tpp / $jml_hari_kerja->jml_hari_kerja;
-                        $potongan_tpp = $tunjangan_per_hari * 40 / 100 * $dataIzin->jenis_izin->persentase_potongan / 100;
+                        if ($dataIzin->jenis_izin_id == 6) {
+                            // Izin Dengan Keterangan: langsung × persentase (tanpa 40%)
+                            $potongan_tpp = $tunjangan_per_hari * $dataIzin->jenis_izin->persentase_potongan / 100;
+                        } else {
+                            $potongan_tpp = $tunjangan_per_hari * 40 / 100 * $dataIzin->jenis_izin->persentase_potongan / 100;
+                        }
                         $total_potongan_tpp = $potongan_tpp;
                         $tpp_diterima = $tunjangan_per_hari - $total_potongan_tpp;
 

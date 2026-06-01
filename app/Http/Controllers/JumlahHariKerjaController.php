@@ -211,7 +211,12 @@ class JumlahHariKerjaController extends Controller
                             }
 
                             if ((int)$value->potongan_tidak_masuk_kerja > 0) {
-                                $potongan_tidak_masuk_kerja = $tunjangan_per_hari * $value->potongan_tidak_masuk_kerja_persen / 100;
+                                if ($value->config_potongan_tpp_id == 6) {
+                                    // Izin Dengan Keterangan: langsung × persentase (tanpa 40%)
+                                    $potongan_tidak_masuk_kerja = $tunjangan_per_hari * $value->potongan_tidak_masuk_kerja_persen / 100;
+                                } else {
+                                    $potongan_tidak_masuk_kerja = $tunjangan_per_hari * 40 / 100 * $value->potongan_tidak_masuk_kerja_persen / 100;
+                                }
                                 $get_data_presensi->potongan_tidak_masuk_kerja = $potongan_tidak_masuk_kerja;
                                 $total_potongan_tpp += $potongan_tidak_masuk_kerja;
                             } else {
