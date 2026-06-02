@@ -992,6 +992,11 @@ class PresensiPegawai extends Controller
         $count = 0;
         $i = 5;
 
+        // Urutkan data berdasarkan tanggal dan reset keys
+        $data = collect($data)->sortBy(function($item) {
+            return strtotime($item->date_attendance);
+        })->values()->all();
+
         foreach ($data as $val) {
             $i++;
             $count++;
