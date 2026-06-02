@@ -79,6 +79,8 @@ class JumlahHariKerjaController extends Controller
             DB::beginTransaction();
             try {
                 $bln_thun_explode = explode('-', $request->bln);
+                $bln_thun_explode[0] = (int) $bln_thun_explode[0];
+                $bln_thun_explode[1] = (int) $bln_thun_explode[1];
                 $cek = Jml_hari_kerja::where([
                     'bulan' => $bln_thun_explode[0],
                     'tahun' => $bln_thun_explode[1]
@@ -148,6 +150,8 @@ class JumlahHariKerjaController extends Controller
             DB::beginTransaction();
             try {
                 $bln_thun_explode = explode('-', $request->bln);
+                $bln_thun_explode[0] = (int) $bln_thun_explode[0];
+                $bln_thun_explode[1] = (int) $bln_thun_explode[1];
                 $cek = Jml_hari_kerja::where('bulan', '=', $bln_thun_explode[0])->where('tahun', '=', $bln_thun_explode[1])->where('id', '!=', $id)->first();
 
                 if ($cek != null) {
@@ -201,9 +205,13 @@ class JumlahHariKerjaController extends Controller
                                 $get_data_presensi->potongan_absen_masuk = $potongan_absen_masuk;
                             }
 
-                            if ((int)$value->potongan_absen_pulang > 0) {
-                                $potongan_absen_pulang = $tunjangan_per_hari * 40 / 100 * $value->potongan_absen_pulang_persen / 100;
+                            if ((int)$value->potongan_absen_pulang > 0 || $value->status_pulang == "Tidak Absen Pulang (PSW)") {
+                                $persen_pulang = $value->potongan_absen_pulang_persen > 0
+                                    ? $value->potongan_absen_pulang_persen
+                                    : \App\Models\ConfigPotTpp::where('group', 'pulang')->value('persentase_potongan') ?? 0;
+                                $potongan_absen_pulang = $tunjangan_per_hari * 40 / 100 * $persen_pulang / 100;
                                 $get_data_presensi->potongan_absen_pulang = $potongan_absen_pulang;
+                                $get_data_presensi->potongan_absen_pulang_persen = $persen_pulang;
                                 $total_potongan_tpp += $potongan_absen_pulang;
                             } else {
                                 $get_data_presensi->potongan_absen_pulang = $potongan_absen_pulang;

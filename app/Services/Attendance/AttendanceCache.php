@@ -110,6 +110,8 @@ class AttendanceCache
 
     public static function clearJmlHariKerja($bulan, $tahun)
     {
+        $bulan = (int) $bulan;
+        $tahun = (int) $tahun;
         Cache::forget("jml_hari_kerja_{$bulan}_{$tahun}");
     }
 
