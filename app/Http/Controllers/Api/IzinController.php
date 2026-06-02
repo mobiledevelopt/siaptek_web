@@ -113,6 +113,12 @@ class IzinController extends Controller
 
         $cek_tgl_pengajuan = array_intersect($tgl_terdaftar, $tgl_pengajuan);
 
+        $jenis_izin = \App\Models\ConfigPotTpp::find($request->jenis_izin_id);
+        if ($jenis_izin && stripos($jenis_izin->title, 'keterangan') !== false && count($tgl_pengajuan) > 2) {
+            $response['message'] = 'Pengajuan izin dengan keterangan dibatasi maksimal 2 hari';
+            return response()->json($response, $code);
+        }
+
         if (count($cek_tgl_pengajuan) > 0) {
             return response()->json([
                 'message' => 'Izin Sudah di Ajukan'
