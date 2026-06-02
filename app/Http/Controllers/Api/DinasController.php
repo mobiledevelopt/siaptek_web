@@ -57,20 +57,26 @@ class DinasController extends Controller
      */
     public function show(Request $request, Dinas $dina)
     {
-        // Radius
-        $range = Radius::where('id', 1)->first()->nilai;
+        // Radius & Global Location
+        $radiusConfig = Radius::where('id', 1)->first();
+        $range = $radiusConfig->nilai;
 
-        // KUMPULKAN LOKASI DINAS
+        // KUMPULKAN LOKASI DINAS & LOKASI GLOBAL
         $rawLocations = [
             [
                 'lat' => $dina->latitude,
                 'lng' => $dina->longitude,
-                'label' => 'Lokasi 1'
+                'label' => 'Lokasi Dinas 1'
             ],
             [
                 'lat' => $dina->latitude_2,
                 'lng' => $dina->longitude_2,
-                'label' => 'Lokasi 2'
+                'label' => 'Lokasi Dinas 2'
+            ],
+            [
+                'lat' => $radiusConfig->latitude,
+                'lng' => $radiusConfig->longitude,
+                'label' => 'Lokasi Global'
             ]
         ];
 

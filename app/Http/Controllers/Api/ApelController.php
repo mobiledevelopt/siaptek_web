@@ -22,7 +22,8 @@ class ApelController extends Controller
     {
         // dd(date('w'));
         $data = JadwalApel::where('hari', '=', date('w'))->where('dinas_id', $request->user()->dinas_id);
-        $radius = Radius::where('id', 2)->first()->nilai;
+        $radiusConfig = Radius::where('id', 2)->first();
+        $radius = $radiusConfig->nilai;
         $result = $data->get();
         $result_object = $data->first();
         
@@ -40,12 +41,17 @@ class ApelController extends Controller
             [
                 'lat' => $result_object->latitude,
                 'lng' => $result_object->longitude,
-                'label' => 'Lokasi 1'
+                'label' => 'Lokasi Dinas 1'
             ],
             [
                 'lat' => $result_object->latitude_2,
                 'lng' => $result_object->longitude_2,
-                'label' => 'Lokasi 2'
+                'label' => 'Lokasi Dinas 2'
+            ],
+            [
+                'lat' => $radiusConfig->latitude,
+                'lng' => $radiusConfig->longitude,
+                'label' => 'Lokasi Global'
             ]
         ];
 

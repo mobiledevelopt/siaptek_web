@@ -150,7 +150,9 @@ class RadiusController extends Controller
                 $data = Radius::findOrFail($id);
 
                 $data->update([
-                    'nilai' => $request->nilai
+                    'nilai' => $request->nilai,
+                    'latitude' => $request->latitude,
+                    'longitude' => $request->longitude,
                 ]);
                 DB::commit();
                 $response = response()->json($this->responseStore(true, NULL, route('radius.index')));

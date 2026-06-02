@@ -10,6 +10,8 @@ class Radius extends Model
     use HasFactory;
     protected $table        = 'radius';
     protected $fillable     = [
-        'nilai'
+        'nilai',
+        'latitude',
+        'longitude'
     ];
 }

@@ -29,6 +29,19 @@
                             <label class="form-label mb-0">Radius</label>
                             <input type="text" value="{{ @$data['nilai']}}" name="nilai" class="form-control" autocomplete="off" />
                         </div>
+                        <div class="alert alert-info">
+                            <i class="fa-solid fa-info-circle"></i> Biarkan kosong jika tidak ingin menggunakan lokasi global.
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 form-group mb-4">
+                                <label class="form-label mb-0">Latitude (Lokasi 1)</label>
+                                <input type="text" value="{{ @$data['latitude']}}" name="latitude" class="form-control" autocomplete="off" />
+                            </div>
+                            <div class="col-md-6 form-group mb-4">
+                                <label class="form-label mb-0">Longitude (Lokasi 1)</label>
+                                <input type="text" value="{{ @$data['longitude']}}" name="longitude" class="form-control" autocomplete="off" />
+                            </div>
+                        </div>
                         <div class="form-group text-end">
                             <button type="submit" class="btn btn-primary">Submit</button>
                         </div>
