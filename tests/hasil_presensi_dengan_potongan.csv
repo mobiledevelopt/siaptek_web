@@ -1,6 +1,0 @@
-﻿No,Hari,Tanggal,"Jam Masuk","Status Masuk","Menit Telat","Pot. Telat","Foto Masuk","Apel Pagi","Apel Pagi At","Foto Apel Pagi","Pot. Apel Pagi","Apel Sore","Apel Sore At","Foto Apel Sore","Pot. Apel Sore","Jam Pulang","Status Pulang","Foto Pulang","Pot. Pulang","Total Potongan","TPP Harian","TPP Diterima",Skenario
-1,Senin,2026-05-04,"2026-05-04 07:15:00",Masuk,0,0,✅,Hadir,"2026-05-04 08:05:00",✅,0,-,-,❌,0,"2026-05-04 15:15:00",Pulang,✅,0,0,45.455,45455,"Sempurna (no deduction)"
-2,Selasa,2026-05-05,"2026-05-05 08:20:00","Telat 1",20,2727,✅,"Tidak Apel",-,❌,3636,-,-,❌,0,"2026-05-05 15:15:00",Pulang,✅,0,6363,45.455,39091,"Telat 20 menit + tidak apel (lewat window)"
-3,Rabu,2026-05-06,"2026-05-06 07:50:00",Masuk,0,0,✅,"Tidak Apel",-,❌,3636,-,-,❌,0,"2026-05-06 15:15:00",Pulang,✅,0,3636,45.455,41818,"Tidak apel pagi"
-4,Kamis,2026-05-07,"2026-05-07 07:45:00",Masuk,0,0,✅,Hadir,"2026-05-07 08:05:00",✅,0,-,-,❌,0,-,"Tidak Absen Pulang (PSW)",❌,3636,3636,45.455,41818,"Tidak pulang"
-5,Jumat,2026-05-08,"2026-05-08 08:45:00","Telat 2",45,5454,✅,"Tidak Apel",-,❌,1818,Hadir,"2026-05-08 16:05:00",✅,0,"2026-05-08 16:15:00",Pulang,✅,0,7272,45.455,38182,"Telat 45 menit + tidak apel pagi (Jumat)"

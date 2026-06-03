@@ -189,9 +189,10 @@
                      }
                  },
                  {
-                     data: 'pegawai.dinas.name',
-                     name: 'pegawai.dinas.name',
+                     data: 'dinas.name',
+                     name: 'dinas.name',
                      render: function(data, type, row) {
+                         if (!data) return "-";
                          str = data.toLowerCase().replace(/\b[a-z]/g, function(letter) {
                              return letter.toUpperCase();
                          });

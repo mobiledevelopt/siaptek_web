@@ -71,9 +71,9 @@ class PresensiPegawai extends Controller
 
         if ($request->ajax()) {
             if ($request->user()->role_id != 1) {
-                $data = AttendancesPegawai::where('attendances_pegawai.dinas_id', $request->user()->dinas_id)->with(['pegawai', 'pegawai.dinas']);
+                $data = AttendancesPegawai::where('attendances_pegawai.dinas_id', $request->user()->dinas_id)->with(['pegawai', 'pegawai.dinas', 'dinas']);
             } else {
-                $data = AttendancesPegawai::with(['pegawai', 'pegawai.dinas']);
+                $data = AttendancesPegawai::with(['pegawai', 'pegawai.dinas', 'dinas']);
             }
 
             if ($request->filled('tgl_awal')) {
@@ -207,7 +207,7 @@ class PresensiPegawai extends Controller
                 }
             }
 
-            $results = $query->groupBy('attendances_pegawai.pegawai_id')->get();
+            $results = $query->groupBy('attendances_pegawai.pegawai_id', 'attendances_pegawai.dinas_id')->get();
         } else {
             // $results = DB::select(
             //     'SELECT *,dinas.name as dinas,pegawai.nip as nip,  pegawai.name as nama, sum(potongan_absen_masuk) as potongan_absen_masuk, sum(potongan_absen_pulang) as potongan_absen_pulang, sum(potongan_tidak_masuk_kerja) as potongan_tidak_masuk_kerja, sum(potongan_cuti) as potongan_cuti , sum(potongan_tidak_apel) as potongan_tidak_apel, sum(total_potongan_tpp) as total_potongan_tpp , sum(tpp_diterima) as tpp_diterima 
@@ -254,7 +254,7 @@ class PresensiPegawai extends Controller
             }
 
             $results = $query
-                ->groupBy('attendances_pegawai.pegawai_id')
+                ->groupBy('attendances_pegawai.pegawai_id', 'attendances_pegawai.dinas_id')
                 ->get();
         }
 
@@ -647,10 +647,22 @@ class PresensiPegawai extends Controller
 
         $this->addSheetTotalPegawai($spreadsheet, 'Seluruh Pegawai', $data, $periode, $start, $end, $status, $request);
 
+        $usedSheetNames = ['Seluruh Pegawai', 'REKAP'];
         foreach ($data as $val) {
-            //create tab sheet
+            $baseName = $val->nama . ' ' . $val->pegawai_id;
+            $sheetName = substr($baseName, 0, 30);
+            
+            $counter = 1;
+            $originalSheetName = $sheetName;
+            while (in_array($sheetName, $usedSheetNames)) {
+                $suffix = " ($counter)";
+                $sheetName = substr($originalSheetName, 0, 30 - strlen($suffix)) . $suffix;
+                $counter++;
+            }
+            $usedSheetNames[] = $sheetName;
+
             $data_pegawai = $this->initData($start, $end, $val->dinas_id, $val->pegawai_id);
-            $this->addSheet($spreadsheet, $val->nama . ' ' . $val->pegawai_id, $data_pegawai, $periode, $request);
+            $this->addSheet($spreadsheet, $sheetName, $data_pegawai, $periode, $request);
         }
 
         $filename = 'laporan-presensi-pegawai_' . $request->user()->id . '_' . $start . '-' . $end . '_' . time() . '.xlsx';
@@ -824,17 +836,23 @@ class PresensiPegawai extends Controller
         // dd($data);
         $this->addSheetTotalPegawai($spreadsheet, 'Seluruh Pegawai', $data, $periode, $start, $end, $status, $request);
 
+        $usedSheetNames = ['Seluruh Pegawai', 'REKAP'];
         for ($i = 0; $i < sizeof($data); $i++) {
-            //create tab sheet
-            // dd($data[$i]);
+            $baseName = $data[$i]->nama . ' ' . $data[$i]->pegawai_id;
+            $sheetName = substr($baseName, 0, 30);
+            
+            $counter = 1;
+            $originalSheetName = $sheetName;
+            while (in_array($sheetName, $usedSheetNames)) {
+                $suffix = " ($counter)";
+                $sheetName = substr($originalSheetName, 0, 30 - strlen($suffix)) . $suffix;
+                $counter++;
+            }
+            $usedSheetNames[] = $sheetName;
+
             $data_pegawai = $this->initData($start, $end, $data[$i]->dinas_id, $data[$i]->pegawai_id, $status);
-            $this->addSheet($spreadsheet, $data[$i]->nama . ' ' . $data[$i]->pegawai_id, $data_pegawai, $periode, $request);
+            $this->addSheet($spreadsheet, $sheetName, $data_pegawai, $periode, $request);
         }
-        // foreach ($data as $val) {
-        //     //create tab sheet
-        //     $data_pegawai = $this->initData($start, $end, $val->dinas_id, $val->pegawai_id);
-        //     $this->addSheet($spreadsheet, $val->nama, $data_pegawai, $periode);
-        // }
 
         // ✅ SESUDAH — bulk dulu, lalu addSheet pakai slice dari grouped
         $pegawai_ids = collect($data)->pluck('pegawai_id')->filter()->values()->toArray();

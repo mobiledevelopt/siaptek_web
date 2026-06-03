@@ -188,79 +188,108 @@ class JumlahHariKerjaController extends Controller
                             $tpp_diterima = 0;
                             $get_data_presensi->tunjangan_per_hari = $tunjangan_per_hari;
                             $get_data_presensi->tpp_diterima = $tpp_diterima;
-                            $get_data_presensi->total_potongan_tpp = $tunjangan_per_hari;
-                            $get_data_presensi->potongan_tidak_masuk_kerja = $tunjangan_per_hari;
-                            $get_data_presensi->potongan_absen_masuk = $potongan_absen_masuk;
-                            $get_data_presensi->potongan_absen_pulang = $potongan_absen_pulang;
-                            $get_data_presensi->potongan_tidak_apel_pagi = $potongan_tidak_apel_pagi;
-                            $get_data_presensi->potongan_tidak_apel_sore = $potongan_tidak_apel_sore;
-                            $get_data_presensi->potongan_cuti = $potongan_cuti;
+                            $get_data_presensi->total_potongan_tpp = (int) round($tunjangan_per_hari);
+                            $get_data_presensi->potongan_tidak_masuk_kerja = (int) round($tunjangan_per_hari);
+                            $get_data_presensi->potongan_absen_masuk = 0;
+                            $get_data_presensi->potongan_absen_pulang = 0;
+                            $get_data_presensi->potongan_tidak_apel_pagi = 0;
+                            $get_data_presensi->potongan_tidak_apel_sore = 0;
+                            $get_data_presensi->potongan_cuti = 0;
                             $get_data_presensi->save();
                         } else {
-                            if ((int)$value->potongan_absen_masuk > 0) {
-                                $potongan_absen_masuk = $tunjangan_per_hari * 40 / 100 * $value->potongan_absen_masuk_persen / 100;
-                                $get_data_presensi->potongan_absen_masuk = $potongan_absen_masuk;
-                                $total_potongan_tpp += $potongan_absen_masuk;
+                            $raw_masuk = 0;
+                            $raw_pulang = 0;
+                            $raw_tidak_masuk = 0;
+                            $raw_apel_pagi = 0;
+                            $raw_apel_sore = 0;
+                            $raw_cuti = 0;
+
+                            if ((float)$value->potongan_absen_masuk > 0 || (float)$value->menit_telat_masuk > 0) {
+                                $persen = $value->potongan_absen_masuk_persen;
+                                
+                                // Selalu force hitung ulang persen dari config berdasarkan menit aktual untuk memperbaiki data salah
+                                if ((float)$value->menit_telat_masuk > 0) {
+                                    $menit = (int)$value->menit_telat_masuk;
+                                    
+                                    // Pindahkan fetch level telat ke luar loop jika memungkinkan, tapi karena ini per baris:
+                                    // Gunakan all() yang biasanya di-cache atau minimal pakai collection
+                                    $levelTelat = \App\Models\ConfigPotTpp::where('group', 'masuk')->get();
+                                    
+                                    $match = $levelTelat->first(function ($row) use ($menit) {
+                                        return $menit >= (int)$row->dari_meni && $menit <= (int)$row->sampai_menit;
+                                    });
+                                    
+                                    if ($match) {
+                                        $persen = $match->persentase_potongan;
+                                        $get_data_presensi->status_masuk = $match->title;
+                                        $get_data_presensi->config_potongan_tpp_id = $match->id;
+                                    } else {
+                                        $max = $levelTelat->sortByDesc(function ($row) { return (int)$row->sampai_menit; })->first();
+                                        if ($max && $menit > (int)$max->sampai_menit) {
+                                            $persen = $max->persentase_potongan;
+                                            $get_data_presensi->status_masuk = $max->title;
+                                            $get_data_presensi->config_potongan_tpp_id = $max->id;
+                                        }
+                                    }
+                                    $get_data_presensi->potongan_absen_masuk_persen = $persen;
+                                }
+
+                                if ($persen > 0) {
+                                    $raw_masuk = $tunjangan_per_hari * 40 / 100 * $persen / 100;
+                                    $get_data_presensi->potongan_absen_masuk = (int) round($raw_masuk);
+                                } else {
+                                    $get_data_presensi->potongan_absen_masuk = 0;
+                                }
                             } else {
-                                $get_data_presensi->potongan_absen_masuk = $potongan_absen_masuk;
+                                $get_data_presensi->potongan_absen_masuk = 0;
                             }
 
-                            if ((int)$value->potongan_absen_pulang > 0 || $value->status_pulang == "Tidak Absen Pulang (PSW)") {
+                            if ((float)$value->potongan_absen_pulang > 0 || $value->status_pulang == "Tidak Absen Pulang (PSW)") {
                                 $persen_pulang = $value->potongan_absen_pulang_persen > 0
                                     ? $value->potongan_absen_pulang_persen
                                     : \App\Models\ConfigPotTpp::where('group', 'pulang')->value('persentase_potongan') ?? 0;
-                                $potongan_absen_pulang = $tunjangan_per_hari * 40 / 100 * $persen_pulang / 100;
-                                $get_data_presensi->potongan_absen_pulang = $potongan_absen_pulang;
+                                $raw_pulang = $tunjangan_per_hari * 40 / 100 * $persen_pulang / 100;
+                                $get_data_presensi->potongan_absen_pulang = (int) round($raw_pulang);
                                 $get_data_presensi->potongan_absen_pulang_persen = $persen_pulang;
-                                $total_potongan_tpp += $potongan_absen_pulang;
                             } else {
-                                $get_data_presensi->potongan_absen_pulang = $potongan_absen_pulang;
+                                $get_data_presensi->potongan_absen_pulang = 0;
                             }
 
-                            if ((int)$value->potongan_tidak_masuk_kerja > 0) {
-                                if ($value->config_potongan_tpp_id == 6) {
-                                    // Izin Dengan Keterangan: langsung × persentase (tanpa 40%)
-                                    $potongan_tidak_masuk_kerja = $tunjangan_per_hari * $value->potongan_tidak_masuk_kerja_persen / 100;
-                                } else {
-                                    $potongan_tidak_masuk_kerja = $tunjangan_per_hari * 40 / 100 * $value->potongan_tidak_masuk_kerja_persen / 100;
-                                }
-                                $get_data_presensi->potongan_tidak_masuk_kerja = $potongan_tidak_masuk_kerja;
-                                $total_potongan_tpp += $potongan_tidak_masuk_kerja;
+                            if ((float)$value->potongan_tidak_masuk_kerja > 0) {
+                                $raw_tidak_masuk = $tunjangan_per_hari * $value->potongan_tidak_masuk_kerja_persen / 100;
+                                $get_data_presensi->potongan_tidak_masuk_kerja = (int) round($raw_tidak_masuk);
                             } else {
-                                $get_data_presensi->potongan_tidak_masuk_kerja = $potongan_tidak_masuk_kerja;
+                                $get_data_presensi->potongan_tidak_masuk_kerja = 0;
                             }
 
-                            if ((int)$value->potongan_tidak_apel_pagi > 0) {
-                                $potongan_tidak_apel_pagi = $tunjangan_per_hari * 40 / 100 * $value->potongan_tidak_apel_pagi_persen / 100;
-                                $get_data_presensi->potongan_tidak_apel_pagi = $potongan_tidak_apel_pagi;
-                                $total_potongan_tpp += $potongan_tidak_apel_pagi;
-                                $potongan_tidak_apel += $potongan_tidak_apel_pagi;
+                            if ((float)$value->potongan_tidak_apel_pagi > 0) {
+                                $raw_apel_pagi = $tunjangan_per_hari * 40 / 100 * $value->potongan_tidak_apel_pagi_persen / 100;
+                                $get_data_presensi->potongan_tidak_apel_pagi = (int) round($raw_apel_pagi);
                             } else {
-                                $get_data_presensi->potongan_tidak_apel_pagi = $potongan_tidak_apel_pagi;
+                                $get_data_presensi->potongan_tidak_apel_pagi = 0;
                             }
 
-                            if ((int)$value->potongan_tidak_apel_sore > 0) {
-                                $potongan_tidak_apel_sore = $tunjangan_per_hari * 40 / 100 * $value->potongan_tidak_apel_sore_persen / 100;
-                                $get_data_presensi->potongan_tidak_apel_sore = $potongan_tidak_apel_sore;
-                                $total_potongan_tpp += $potongan_tidak_apel_sore;
-                                $potongan_tidak_apel += $potongan_tidak_apel_sore;
+                            if ((float)$value->potongan_tidak_apel_sore > 0) {
+                                $raw_apel_sore = $tunjangan_per_hari * 40 / 100 * $value->potongan_tidak_apel_sore_persen / 100;
+                                $get_data_presensi->potongan_tidak_apel_sore = (int) round($raw_apel_sore);
                             } else {
-                                $get_data_presensi->potongan_tidak_apel_sore = $potongan_tidak_apel_sore;
+                                $get_data_presensi->potongan_tidak_apel_sore = 0;
                             }
 
-                            if ((int)$value->potongan_cuti > 0) {
-                                $potongan_cuti = $tunjangan_per_hari * 40 / 100 * $value->potongan_cuti_persen / 100;
-                                $get_data_presensi->potongan_cuti = $potongan_cuti;
-                                $total_potongan_tpp += $potongan_cuti;
+                            if ((float)$value->potongan_cuti > 0) {
+                                $raw_cuti = $tunjangan_per_hari * $value->potongan_cuti_persen / 100;
+                                $get_data_presensi->potongan_cuti = (int) round($raw_cuti);
                             } else {
-                                $get_data_presensi->potongan_cuti = $potongan_cuti;
+                                $get_data_presensi->potongan_cuti = 0;
                             }
 
-                            $tpp_diterima = $tunjangan_per_hari - $total_potongan_tpp;
+                            $total_raw = $raw_masuk + $raw_pulang + $raw_tidak_masuk + $raw_apel_pagi + $raw_apel_sore + $raw_cuti;
+                            $tpp_diterima = (int) round($tunjangan_per_hari - $total_raw);
+                            
                             $get_data_presensi->tunjangan_per_hari = $tunjangan_per_hari;
                             $get_data_presensi->tpp_diterima = $tpp_diterima;
-                            $get_data_presensi->total_potongan_tpp = $total_potongan_tpp;
-                            $get_data_presensi->potongan_tidak_apel = $potongan_tidak_apel;
+                            $get_data_presensi->total_potongan_tpp = (int) round($total_raw);
+                            $get_data_presensi->potongan_tidak_apel = (int) round($raw_apel_pagi + $raw_apel_sore);
                             $get_data_presensi->save();
                         }
                     }

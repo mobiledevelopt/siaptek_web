@@ -68,6 +68,11 @@ class AttendancesPegawai extends Model
     {
         return $this->belongsTo(Pegawai::class, 'pegawai_id');
     }
+
+    public function dinas()
+    {
+        return $this->belongsTo(Dinas::class, 'dinas_id');
+    }
     public function config_tpp()
     {
         return $this->belongsTo(ConfigPotTpp::class, 'config_potongan_tpp_id');
