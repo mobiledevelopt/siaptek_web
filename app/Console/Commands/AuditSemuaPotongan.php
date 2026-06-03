@@ -87,27 +87,49 @@ class AuditSemuaPotongan extends Command
                     }
                 }
 
-                // 2. Cek Potongan Pulang Cepat (PSW)
-                if ((float)$absen->potongan_absen_pulang > 0 || (float)$absen->potongan_absen_pulang_persen > 0) {
-                    $persen = (float) $absen->potongan_absen_pulang_persen;
-                    $seharusnya = (int) round(($tunjanganPerHari * 40 / 100) * ($persen / 100));
-                    if ((int)$absen->potongan_absen_pulang !== $seharusnya) {
+                // 2. Cek Potongan Pulang Cepat (PSW) / Tidak Absen Pulang
+                $isPsw = empty($absen->outgoing_time) || $absen->outgoing_time === '00:00:00' || $absen->status_pulang === 'Tidak Absen Pulang (PSW)';
+                
+                if ($absen->status === 'Masuk' && ($isPsw || (float)$absen->potongan_absen_pulang > 0 || (float)$absen->potongan_absen_pulang_persen > 0)) {
+                    // PSW SOP is 20% according to config, or 0% if not PSW but has weird DB values
+                    $persenSop = $isPsw ? 20 : 0; 
+                    
+                    $persenAktual = (float) $absen->potongan_absen_pulang_persen;
+
+                    if ($persenAktual !== (float)$persenSop && $isFix) {
+                        $absen->potongan_absen_pulang_persen = $persenSop;
+                        $persenAktual = $persenSop;
+                    }
+
+                    if ($isPsw && $absen->status_pulang !== 'Tidak Absen Pulang (PSW)' && $isFix) {
+                        $absen->status_pulang = 'Tidak Absen Pulang (PSW)';
+                    }
+
+                    $seharusnya = (int) round(($tunjanganPerHari * 40 / 100) * ($persenSop / 100));
+                    if ((int)$absen->potongan_absen_pulang !== $seharusnya || $persenAktual !== (float)$persenSop) {
                         $isSalah = true;
-                        $msgs[] = "Pulang Cepat Aktual: Rp {$absen->potongan_absen_pulang} -> Seharusnya: Rp $seharusnya";
-                        if ($isExport) $csvRows[] = [$absen->id, $absen->pegawai_id, $absen->date_attendance, 'Pulang Cepat', "Rp {$absen->potongan_absen_pulang}", "Rp $seharusnya"];
+                        $msgs[] = "Pulang Cepat (PSW) Aktual: Rp {$absen->potongan_absen_pulang} ({$absen->potongan_absen_pulang_persen}%) -> Seharusnya: Rp $seharusnya ({$persenSop}%)";
+                        if ($isExport) $csvRows[] = [$absen->id, $absen->pegawai_id, $absen->date_attendance, 'Pulang Cepat (PSW)', "Rp {$absen->potongan_absen_pulang} ({$absen->potongan_absen_pulang_persen}%)", "Rp $seharusnya ({$persenSop}%)"];
                         if ($isFix) $absen->potongan_absen_pulang = $seharusnya;
                     }
                 }
 
                 // 3. Cek Apel Pagi
-                if ((float)$absen->potongan_tidak_apel_pagi > 0 || (float)$absen->potongan_tidak_apel_pagi_persen > 0) {
+                $hadirApelPagi = !empty($absen->apel_pagi_at) || strtolower(trim($absen->status_apel_pagi ?? '')) === 'hadir';
+                $isTidakApelPagi = !$hadirApelPagi;
+
+                if ($absen->status === 'Masuk' && ($isTidakApelPagi || (float)$absen->potongan_tidak_apel_pagi > 0 || (float)$absen->potongan_tidak_apel_pagi_persen > 0)) {
                     $isFriday = \Carbon\Carbon::parse($absen->date_attendance)->dayOfWeekIso == 5;
-                    $persenSop = $isFriday ? 10 : 20; // Sesuai SOP
+                    $persenSop = $isTidakApelPagi ? ($isFriday ? 10 : 20) : 0; // Sesuai SOP
                     $persenAktual = (float) $absen->potongan_tidak_apel_pagi_persen;
                     
                     if ($persenAktual !== (float)$persenSop && $isFix) {
                         $absen->potongan_tidak_apel_pagi_persen = $persenSop;
                         $persenAktual = $persenSop;
+                    }
+
+                    if ($isTidakApelPagi && $absen->status_apel_pagi !== 'Tidak Apel' && $isFix) {
+                        $absen->status_apel_pagi = 'Tidak Apel';
                     }
 
                     $seharusnya = (int) round(($tunjanganPerHari * 40 / 100) * ($persenSop / 100));
@@ -120,15 +142,27 @@ class AuditSemuaPotongan extends Command
                 }
 
                 // 4. Cek Apel Sore
-                if ((float)$absen->potongan_tidak_apel_sore > 0 || (float)$absen->potongan_tidak_apel_sore_persen > 0) {
-                    $isFriday = \Carbon\Carbon::parse($absen->date_attendance)->dayOfWeekIso == 5;
-                    $persenSop = $isFriday ? 10 : 0; // Hanya Jumat ada Apel Sore, persentase 10%
+                $isFriday = \Carbon\Carbon::parse($absen->date_attendance)->dayOfWeekIso == 5;
+                $hadirApelSore = !empty($absen->apel_sore_at) || strtolower(trim($absen->status_apel_sore ?? '')) === 'hadir';
+                $isTidakApelSore = !$hadirApelSore;
+
+                $hasApelSoreData = (float)$absen->potongan_tidak_apel_sore > 0 || (float)$absen->potongan_tidak_apel_sore_persen > 0;
+                
+                // Audit jika: ini hari Jumat (lalu dia tidak hadir), ATAU ada data potongan Apel Sore yang terekam (padahal bukan Jumat)
+                if ($absen->status === 'Masuk' && (($isFriday && $isTidakApelSore) || $hasApelSoreData)) {
+                    $persenSop = ($isFriday && $isTidakApelSore) ? 10 : 0; // Hanya Jumat yang ada Apel Sore (10%)
                     
                     $persenAktual = (float) $absen->potongan_tidak_apel_sore_persen;
 
                     if ($persenAktual !== (float)$persenSop && $isFix) {
                         $absen->potongan_tidak_apel_sore_persen = $persenSop;
                         $persenAktual = $persenSop;
+                    }
+
+                    if ($isFriday && $isTidakApelSore && $absen->status_apel_sore !== 'Tidak Apel' && $isFix) {
+                        $absen->status_apel_sore = 'Tidak Apel';
+                    } else if (!$isFriday && $absen->status_apel_sore === 'Tidak Apel' && $isFix) {
+                        $absen->status_apel_sore = null;
                     }
 
                     $seharusnya = (int) round(($tunjanganPerHari * 40 / 100) * ($persenSop / 100));
