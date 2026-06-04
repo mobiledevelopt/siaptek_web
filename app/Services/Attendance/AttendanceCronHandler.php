@@ -96,6 +96,7 @@ class AttendanceCronHandler
             // ======================
             'potongan_absen_masuk' => $calc['potongan']['telat']['final'],
             'potongan_absen_pulang' => $calc['potongan']['pulang']['final'],
+            'potongan_absen_pulang_persen' => $calc['potongan']['pulang']['persen'] ?? 0,
             'potongan_tidak_apel_pagi' => $calc['potongan']['apel_pagi']['final'],
             'potongan_tidak_apel_pagi_persen' => $calc['potongan']['apel_pagi']['persen'] ?? 0,
             'potongan_tidak_apel_sore' => $calc['potongan']['apel_sore']['final'],

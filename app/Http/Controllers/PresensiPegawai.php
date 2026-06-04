@@ -648,18 +648,21 @@ class PresensiPegawai extends Controller
         $this->addSheetTotalPegawai($spreadsheet, 'Seluruh Pegawai', $data, $periode, $start, $end, $status, $request);
 
         $usedSheetNames = ['Seluruh Pegawai', 'REKAP'];
+        $usedSheetNamesLower = array_map('strtolower', $usedSheetNames);
         foreach ($data as $val) {
             $baseName = $val->nama . ' ' . $val->pegawai_id;
+            $baseName = str_replace(["*", ":", "/", "\\", "?", "[", "]"], '', $baseName);
             $sheetName = substr($baseName, 0, 30);
             
             $counter = 1;
             $originalSheetName = $sheetName;
-            while (in_array($sheetName, $usedSheetNames)) {
+            while (in_array(strtolower($sheetName), $usedSheetNamesLower)) {
                 $suffix = " ($counter)";
                 $sheetName = substr($originalSheetName, 0, 30 - strlen($suffix)) . $suffix;
                 $counter++;
             }
             $usedSheetNames[] = $sheetName;
+            $usedSheetNamesLower[] = strtolower($sheetName);
 
             $data_pegawai = $this->initData($start, $end, $val->dinas_id, $val->pegawai_id);
             $this->addSheet($spreadsheet, $sheetName, $data_pegawai, $periode, $request);
@@ -837,18 +840,21 @@ class PresensiPegawai extends Controller
         $this->addSheetTotalPegawai($spreadsheet, 'Seluruh Pegawai', $data, $periode, $start, $end, $status, $request);
 
         $usedSheetNames = ['Seluruh Pegawai', 'REKAP'];
+        $usedSheetNamesLower = array_map('strtolower', $usedSheetNames);
         for ($i = 0; $i < sizeof($data); $i++) {
             $baseName = $data[$i]->nama . ' ' . $data[$i]->pegawai_id;
+            $baseName = str_replace(["*", ":", "/", "\\", "?", "[", "]"], '', $baseName);
             $sheetName = substr($baseName, 0, 30);
             
             $counter = 1;
             $originalSheetName = $sheetName;
-            while (in_array($sheetName, $usedSheetNames)) {
+            while (in_array(strtolower($sheetName), $usedSheetNamesLower)) {
                 $suffix = " ($counter)";
                 $sheetName = substr($originalSheetName, 0, 30 - strlen($suffix)) . $suffix;
                 $counter++;
             }
             $usedSheetNames[] = $sheetName;
+            $usedSheetNamesLower[] = strtolower($sheetName);
 
             $data_pegawai = $this->initData($start, $end, $data[$i]->dinas_id, $data[$i]->pegawai_id, $status);
             $this->addSheet($spreadsheet, $sheetName, $data_pegawai, $periode, $request);
@@ -919,7 +925,18 @@ class PresensiPegawai extends Controller
     private function addSheet($spreadsheet, $title, $data, $periode, $request)
     {
 
+        $title = str_replace(["*", ":", "/", "\\", "?", "[", "]"], '', $title);
         $title = substr($title, 0, 30);
+
+        // Defensive: ensure no duplicate sheet name in the workbook
+        $existingNames = array_map('strtolower', $spreadsheet->getSheetNames());
+        $counter = 1;
+        $originalTitle = $title;
+        while (in_array(strtolower($title), $existingNames)) {
+            $suffix = " ($counter)";
+            $title = substr($originalTitle, 0, 30 - strlen($suffix)) . $suffix;
+            $counter++;
+        }
 
         $myWorkSheet = new \PhpOffice\PhpSpreadsheet\Worksheet\Worksheet($spreadsheet, $title);
         $spreadsheet->addSheet($myWorkSheet);
@@ -1105,7 +1122,18 @@ class PresensiPegawai extends Controller
         // dd($title);
         // $title = substr($title, 0, 30);
 
-        $myWorkSheet = new \PhpOffice\PhpSpreadsheet\Worksheet\Worksheet($spreadsheet, "Seluruh Pegawai");
+        // Defensive: ensure no duplicate sheet name in the workbook
+        $sheetTitle = "Seluruh Pegawai";
+        $existingNames = array_map('strtolower', $spreadsheet->getSheetNames());
+        $counter = 1;
+        $originalTitle = $sheetTitle;
+        while (in_array(strtolower($sheetTitle), $existingNames)) {
+            $suffix = " ($counter)";
+            $sheetTitle = substr($originalTitle, 0, 30 - strlen($suffix)) . $suffix;
+            $counter++;
+        }
+
+        $myWorkSheet = new \PhpOffice\PhpSpreadsheet\Worksheet\Worksheet($spreadsheet, $sheetTitle);
         $spreadsheet->addSheet($myWorkSheet);
 
         $styleArray = array(

@@ -15,7 +15,7 @@ class PresensiExportJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $timeout = 7200;
-    public $tries = 1;
+    public $tries = 3;
 
     private $jobId;
     private $payload;
@@ -39,13 +39,19 @@ class PresensiExportJob implements ShouldQueue
                 'files' => $result['files'] ?? [],
             ]);
         } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('PresensiExportJob gagal: ' . $e->getMessage(), [
+                'job_id' => $this->jobId,
+                'exception' => $e->getTraceAsString(),
+            ]);
+
             $this->writeStatus([
                 'status' => 'failed',
                 'message' => 'Export gagal diproses',
                 'error' => $e->getMessage(),
             ]);
 
-            throw $e;
+            // Jangan throw ulang - error sudah dicatat di status JSON dan log.
+            // Throw menyebabkan MaxAttemptsExceededException yang menyembunyikan error asli.
         }
     }
 
