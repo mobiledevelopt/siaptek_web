@@ -49,9 +49,11 @@ class PayrollCalculator
         // ======================
         // POTONGAN PULANG
         // ======================
+        $pulangPersen = 0;
         if (empty($absen->outgoing_time) || $absen->outgoing_time === '00:00:00') {
-            $cfg = $config['configTpp']['pulang'];
-            $pulang = $this->potong($tunjangan, 0.4, $cfg->persentase_potongan);
+            $cfgPulang = $config['configTpp']['pulang'];
+            $pulang = $this->potong($tunjangan, 0.4, $cfgPulang->persentase_potongan);
+            $pulangPersen = $cfgPulang->persentase_potongan;
         }
 
         // ======================
@@ -61,13 +63,17 @@ class PayrollCalculator
         $persen = $isFriday ? $cfgApel->persentase_potongan / 2 : $cfgApel->persentase_potongan;
 
         $hadirApelPagi = !empty($absen->apel_pagi_at) || strtolower(trim($absen->status_apel_pagi ?? '')) === 'hadir';
+        $apelPagiPersen = 0;
         if (!$hadirApelPagi) {
             $apelPagi = $this->potong($tunjangan, 0.4, $persen);
+            $apelPagiPersen = $persen;
         }
 
         $hadirApelSore = !empty($absen->apel_sore_at) || strtolower(trim($absen->status_apel_sore ?? '')) === 'hadir';
+        $apelSorePersen = 0;
         if ($isFriday && !$hadirApelSore) {
             $apelSore = $this->potong($tunjangan, 0.4, $persen);
+            $apelSorePersen = $persen;
         }
 
         $totalRaw = $telat + $pulang + $apelPagi + $apelSore;
@@ -84,19 +90,19 @@ class PayrollCalculator
                 'pulang' => [
                     'raw' => $pulang,
                     'final' => (int) round($pulang),
-                    'persen' => $cfg->persentase_potongan ?? null,
+                    'persen' => $pulangPersen,
                     'ket' => 'Tidak Absen Pulang'
                 ],
                 'apel_pagi' => [
                     'raw' => $apelPagi,
                     'final' => (int) round($apelPagi),
-                    'persen' => $persen,
+                    'persen' => $apelPagiPersen,
                     'ket' => 'Tidak Apel Pagi'
                 ],
                 'apel_sore' => [
                     'raw' => $apelSore,
                     'final' => (int) round($apelSore),
-                    'persen' => $persen,
+                    'persen' => $apelSorePersen,
                     'ket' => 'Tidak Apel Sore'
                 ],
             ],

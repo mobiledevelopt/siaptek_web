@@ -6,11 +6,12 @@ use Illuminate\Console\Command;
 
 class AuditSemuaPotongan extends Command
 {
-    protected $signature = 'absen:audit-potongan {--month= : Bulan (01-12)} {--year= : Tahun (misal 2026)} {--fix : Otomatis perbaiki data yang salah} {--export : Export data yang salah ke CSV}';
+    protected $signature = 'absen:audit-potongan {--date= : Tanggal (YYYY-MM-DD)} {--month= : Bulan (01-12)} {--year= : Tahun (misal 2026)} {--fix : Otomatis perbaiki data yang salah} {--export : Export data yang salah ke CSV}';
     protected $description = 'Validasi dan temukan data presensi yang semua potongan TPP-nya salah hitung (Telat, PSW, Apel, Alfa, Cuti)';
 
     public function handle()
     {
+        $date = $this->option('date');
         $month = $this->option('month');
         $year = $this->option('year');
         $isFix = $this->option('fix');
@@ -18,7 +19,9 @@ class AuditSemuaPotongan extends Command
 
         $query = \App\Models\AttendancesPegawai::query();
 
-        if ($month && $year) {
+        if ($date) {
+            $query->whereDate('date_attendance', $date);
+        } else if ($month && $year) {
             $query->whereYear('date_attendance', $year)
                   ->whereMonth('date_attendance', $month);
         }
@@ -93,24 +96,29 @@ class AuditSemuaPotongan extends Command
                 if ($absen->status === 'Masuk' && ($isPsw || (float)$absen->potongan_absen_pulang > 0 || (float)$absen->potongan_absen_pulang_persen > 0)) {
                     // PSW SOP is 20% according to config, or 0% if not PSW but has weird DB values
                     $persenSop = $isPsw ? 20 : 0; 
-                    
                     $persenAktual = (float) $absen->potongan_absen_pulang_persen;
-
-                    if ($persenAktual !== (float)$persenSop && $isFix) {
-                        $absen->potongan_absen_pulang_persen = $persenSop;
-                        $persenAktual = $persenSop;
-                    }
-
-                    if ($isPsw && $absen->status_pulang !== 'Tidak Absen Pulang (PSW)' && $isFix) {
-                        $absen->status_pulang = 'Tidak Absen Pulang (PSW)';
-                    }
-
                     $seharusnya = (int) round(($tunjanganPerHari * 40 / 100) * ($persenSop / 100));
-                    if ((int)$absen->potongan_absen_pulang !== $seharusnya || $persenAktual !== (float)$persenSop) {
+
+                    $statusPulangSalah = $isPsw && $absen->status_pulang !== 'Tidak Absen Pulang (PSW)';
+
+                    if ((int)$absen->potongan_absen_pulang !== $seharusnya || $persenAktual !== (float)$persenSop || $statusPulangSalah) {
                         $isSalah = true;
-                        $msgs[] = "Pulang Cepat (PSW) Aktual: Rp {$absen->potongan_absen_pulang} ({$absen->potongan_absen_pulang_persen}%) -> Seharusnya: Rp $seharusnya ({$persenSop}%)";
-                        if ($isExport) $csvRows[] = [$absen->id, $absen->pegawai_id, $absen->date_attendance, 'Pulang Cepat (PSW)', "Rp {$absen->potongan_absen_pulang} ({$absen->potongan_absen_pulang_persen}%)", "Rp $seharusnya ({$persenSop}%)"];
-                        if ($isFix) $absen->potongan_absen_pulang = $seharusnya;
+                        
+                        if ((int)$absen->potongan_absen_pulang !== $seharusnya || $persenAktual !== (float)$persenSop) {
+                            $msgs[] = "Pulang Cepat (PSW) Aktual: Rp {$absen->potongan_absen_pulang} ({$persenAktual}%) -> Seharusnya: Rp $seharusnya ({$persenSop}%)";
+                            if ($isExport) $csvRows[] = [$absen->id, $absen->pegawai_id, $absen->date_attendance, 'Pulang Cepat (PSW)', "Rp {$absen->potongan_absen_pulang} ({$persenAktual}%)", "Rp $seharusnya ({$persenSop}%)"];
+                        } else if ($statusPulangSalah) {
+                            $msgs[] = "Status Pulang Aktual: {$absen->status_pulang} -> Seharusnya: Tidak Absen Pulang (PSW)";
+                            if ($isExport) $csvRows[] = [$absen->id, $absen->pegawai_id, $absen->date_attendance, 'Status Pulang', $absen->status_pulang, 'Tidak Absen Pulang (PSW)'];
+                        }
+
+                        if ($isFix) {
+                            $absen->potongan_absen_pulang_persen = $persenSop;
+                            $absen->potongan_absen_pulang = $seharusnya;
+                            if ($statusPulangSalah) {
+                                $absen->status_pulang = 'Tidak Absen Pulang (PSW)';
+                            }
+                        }
                     }
                 }
 
@@ -122,22 +130,28 @@ class AuditSemuaPotongan extends Command
                     $isFriday = \Carbon\Carbon::parse($absen->date_attendance)->dayOfWeekIso == 5;
                     $persenSop = $isTidakApelPagi ? ($isFriday ? 10 : 20) : 0; // Sesuai SOP
                     $persenAktual = (float) $absen->potongan_tidak_apel_pagi_persen;
-                    
-                    if ($persenAktual !== (float)$persenSop && $isFix) {
-                        $absen->potongan_tidak_apel_pagi_persen = $persenSop;
-                        $persenAktual = $persenSop;
-                    }
-
-                    if ($isTidakApelPagi && $absen->status_apel_pagi !== 'Tidak Apel' && $isFix) {
-                        $absen->status_apel_pagi = 'Tidak Apel';
-                    }
-
                     $seharusnya = (int) round(($tunjanganPerHari * 40 / 100) * ($persenSop / 100));
-                    if ((int)$absen->potongan_tidak_apel_pagi !== $seharusnya || $persenAktual !== (float)$persenSop) {
+
+                    $statusApelPagiSalah = $isTidakApelPagi && $absen->status_apel_pagi !== 'Tidak Apel';
+
+                    if ((int)$absen->potongan_tidak_apel_pagi !== $seharusnya || $persenAktual !== (float)$persenSop || $statusApelPagiSalah) {
                         $isSalah = true;
-                        $msgs[] = "Apel Pagi Aktual: Rp {$absen->potongan_tidak_apel_pagi} ({$absen->potongan_tidak_apel_pagi_persen}%) -> Seharusnya: Rp $seharusnya ({$persenSop}%)";
-                        if ($isExport) $csvRows[] = [$absen->id, $absen->pegawai_id, $absen->date_attendance, 'Apel Pagi', "Rp {$absen->potongan_tidak_apel_pagi} ({$absen->potongan_tidak_apel_pagi_persen}%)", "Rp $seharusnya ({$persenSop}%)"];
-                        if ($isFix) $absen->potongan_tidak_apel_pagi = $seharusnya;
+                        
+                        if ((int)$absen->potongan_tidak_apel_pagi !== $seharusnya || $persenAktual !== (float)$persenSop) {
+                            $msgs[] = "Apel Pagi Aktual: Rp {$absen->potongan_tidak_apel_pagi} ({$persenAktual}%) -> Seharusnya: Rp $seharusnya ({$persenSop}%)";
+                            if ($isExport) $csvRows[] = [$absen->id, $absen->pegawai_id, $absen->date_attendance, 'Apel Pagi', "Rp {$absen->potongan_tidak_apel_pagi} ({$persenAktual}%)", "Rp $seharusnya ({$persenSop}%)"];
+                        } else if ($statusApelPagiSalah) {
+                            $msgs[] = "Status Apel Pagi Aktual: {$absen->status_apel_pagi} -> Seharusnya: Tidak Apel";
+                            if ($isExport) $csvRows[] = [$absen->id, $absen->pegawai_id, $absen->date_attendance, 'Status Apel Pagi', $absen->status_apel_pagi, 'Tidak Apel'];
+                        }
+
+                        if ($isFix) {
+                            $absen->potongan_tidak_apel_pagi_persen = $persenSop;
+                            $absen->potongan_tidak_apel_pagi = $seharusnya;
+                            if ($statusApelPagiSalah) {
+                                $absen->status_apel_pagi = 'Tidak Apel';
+                            }
+                        }
                     }
                 }
 
@@ -151,26 +165,37 @@ class AuditSemuaPotongan extends Command
                 // Audit jika: ini hari Jumat (lalu dia tidak hadir), ATAU ada data potongan Apel Sore yang terekam (padahal bukan Jumat)
                 if ($absen->status === 'Masuk' && (($isFriday && $isTidakApelSore) || $hasApelSoreData)) {
                     $persenSop = ($isFriday && $isTidakApelSore) ? 10 : 0; // Hanya Jumat yang ada Apel Sore (10%)
-                    
                     $persenAktual = (float) $absen->potongan_tidak_apel_sore_persen;
-
-                    if ($persenAktual !== (float)$persenSop && $isFix) {
-                        $absen->potongan_tidak_apel_sore_persen = $persenSop;
-                        $persenAktual = $persenSop;
-                    }
-
-                    if ($isFriday && $isTidakApelSore && $absen->status_apel_sore !== 'Tidak Apel' && $isFix) {
-                        $absen->status_apel_sore = 'Tidak Apel';
-                    } else if (!$isFriday && $absen->status_apel_sore === 'Tidak Apel' && $isFix) {
-                        $absen->status_apel_sore = null;
-                    }
-
                     $seharusnya = (int) round(($tunjanganPerHari * 40 / 100) * ($persenSop / 100));
-                    if ((int)$absen->potongan_tidak_apel_sore !== $seharusnya || $persenAktual !== (float)$persenSop) {
+
+                    $statusApelSoreSalah = false;
+                    $newStatusApelSore = null;
+                    if ($isFriday && $isTidakApelSore && $absen->status_apel_sore !== 'Tidak Apel') {
+                        $statusApelSoreSalah = true;
+                        $newStatusApelSore = 'Tidak Apel';
+                    } else if (!$isFriday && $absen->status_apel_sore === 'Tidak Apel') {
+                        $statusApelSoreSalah = true;
+                        $newStatusApelSore = null;
+                    }
+
+                    if ((int)$absen->potongan_tidak_apel_sore !== $seharusnya || $persenAktual !== (float)$persenSop || $statusApelSoreSalah) {
                         $isSalah = true;
-                        $msgs[] = "Apel Sore Aktual: Rp {$absen->potongan_tidak_apel_sore} ({$absen->potongan_tidak_apel_sore_persen}%) -> Seharusnya: Rp $seharusnya ({$persenSop}%)";
-                        if ($isExport) $csvRows[] = [$absen->id, $absen->pegawai_id, $absen->date_attendance, 'Apel Sore', "Rp {$absen->potongan_tidak_apel_sore} ({$absen->potongan_tidak_apel_sore_persen}%)", "Rp $seharusnya ({$persenSop}%)"];
-                        if ($isFix) $absen->potongan_tidak_apel_sore = $seharusnya;
+
+                        if ((int)$absen->potongan_tidak_apel_sore !== $seharusnya || $persenAktual !== (float)$persenSop) {
+                            $msgs[] = "Apel Sore Aktual: Rp {$absen->potongan_tidak_apel_sore} ({$persenAktual}%) -> Seharusnya: Rp $seharusnya ({$persenSop}%)";
+                            if ($isExport) $csvRows[] = [$absen->id, $absen->pegawai_id, $absen->date_attendance, 'Apel Sore', "Rp {$absen->potongan_tidak_apel_sore} ({$persenAktual}%)", "Rp $seharusnya ({$persenSop}%)"];
+                        } else if ($statusApelSoreSalah) {
+                            $msgs[] = "Status Apel Sore Aktual: {$absen->status_apel_sore} -> Seharusnya: " . ($newStatusApelSore ?? 'Kosong');
+                            if ($isExport) $csvRows[] = [$absen->id, $absen->pegawai_id, $absen->date_attendance, 'Status Apel Sore', $absen->status_apel_sore, $newStatusApelSore ?? 'Kosong'];
+                        }
+
+                        if ($isFix) {
+                            $absen->potongan_tidak_apel_sore_persen = $persenSop;
+                            $absen->potongan_tidak_apel_sore = $seharusnya;
+                            if ($statusApelSoreSalah) {
+                                $absen->status_apel_sore = $newStatusApelSore;
+                            }
+                        }
                     }
                 }
 

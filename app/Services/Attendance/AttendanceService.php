@@ -38,7 +38,7 @@ class AttendanceService
             ]);
         }
 
-        [$telat, $status, $potonganTpp, $tppDiterima, $persenPotong, $configPotTppId] = AttendanceCalculator::hitungTelat(
+        [$telat, $status, $potonganTpp, $tppDiterima, $persenPotong, $configPotTppId, $tunjanganPerHari] = AttendanceCalculator::hitungTelat(
             $jadwal,
             $tpp,
             $jmlHariKerja,
@@ -53,7 +53,8 @@ class AttendanceService
             $potonganTpp,
             $tppDiterima,
             $persenPotong,
-            $configPotTppId
+            $configPotTppId,
+            $tunjanganPerHari
         );
     }
 

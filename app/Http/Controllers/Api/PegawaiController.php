@@ -54,8 +54,7 @@ class PegawaiController extends Controller
             foreach ($errors->all() as $message) {
                 array_push($messages, $message);
             }
-            $response['message'] = implode("  ", $messages);
-            return response()->json($response, 422);
+            return response()->json(['message' => implode("  ", $messages)], 422);
         }
 
         // 0 minggu, 1 senin, 2 selasa, 3 rabu, 4 kamis, 5 jumat, 6 sabtu
@@ -282,8 +281,7 @@ class PegawaiController extends Controller
             foreach ($errors->all() as $message) {
                 array_push($messages, $message);
             }
-            $response['message'] = implode("  ", $messages);
-            return response()->json($response, 422);
+            return response()->json(['message' => implode("  ", $messages)], 422);
         }
 
         //cek jadwal absen

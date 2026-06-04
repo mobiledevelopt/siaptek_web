@@ -20,7 +20,7 @@ class AttendanceRepository
             ->first();
     }
 
-    public static function createClockIn($user, $jadwal, $telat, $status, $potonganTpp = 0, $tppDiterima = 0, $persenPotong = 0, $configPotTppId = null)
+    public static function createClockIn($user, $jadwal, $telat, $status, $potonganTpp = 0, $tppDiterima = 0, $persenPotong = 0, $configPotTppId = null, $tunjanganPerHari = 0)
     {
         return AttendancesPegawai::create([
             'pegawai_id' => $user->id,
@@ -35,6 +35,7 @@ class AttendanceRepository
             'config_potongan_tpp_id' => $configPotTppId,
             'tpp_diterima' => $tppDiterima,
             'total_potongan_tpp' => $potonganTpp,
+            'tunjangan_per_hari' => $tunjanganPerHari,
         ]);
     }
 }

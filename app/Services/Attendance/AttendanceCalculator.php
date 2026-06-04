@@ -46,7 +46,7 @@ class AttendanceCalculator
 
         $tppDiterima = (int) round($tunjanganPerHari - $totalPotongan);
 
-        return [$menit, $status, $totalPotongan, $tppDiterima, $persenPotong, $configPotTppId];
+        return [$menit, $status, $totalPotongan, $tppDiterima, $persenPotong, $configPotTppId, $tunjanganPerHari];
 
     }
 }
