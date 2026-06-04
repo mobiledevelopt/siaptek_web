@@ -28,6 +28,7 @@ class Kernel extends ConsoleKernel
         // $schedule->command('app:move-compress-image')->timezone('Asia/jakarta')->hourly()->between('8:00', '19:00');
 
         $schedule->command('app:move-compress-image')->timezone('Asia/jakarta')->everyMinute();
+        $schedule->command('app:move-compress-image backfill')->timezone('Asia/jakarta')->dailyAt('02:00');
 
         $schedule->command('app:presensi-reminder')->everyMinute();
 

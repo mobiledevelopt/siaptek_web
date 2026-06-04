@@ -37,7 +37,34 @@ class MoveCompressImage extends Command
             Log::info("app:move-compress-image manual run for date: {$dateArg}");
             $this->processDate($dateArg);
         } else {
-            $this->processDate(date('Y-m-d'));
+            $this->handleRecent();
+        }
+    }
+
+    /**
+     * Process only recently updated records (e.g. last 60 minutes).
+     * This is highly optimized for every-minute crons and automatically catches late uploads.
+     */
+    private function handleRecent()
+    {
+        $dispatched = 0;
+
+        AttendancesPegawai::where('updated_at', '>=', now()->subMinutes(60))
+            ->where('status', 'Masuk')
+            ->chunk(100, function ($attendances) use (&$dispatched) {
+                foreach ($attendances as $item) {
+                    $dispatched += $this->processImage($item->foto_absen_masuk_path, "temp");
+                    $dispatched += $this->processImage($item->foto_absen_pulang_path, "temp");
+                    $dispatched += $this->processImage($item->foto_apel_pagi_path, "temp");
+                    $dispatched += $this->processImage($item->foto_apel_sore_path, "temp");
+                    $dispatched += $this->processImage($item->foto_apel_pagi_path, "temp_apel");
+                    $dispatched += $this->processImage($item->foto_apel_sore_path, "temp_apel");
+                }
+            });
+
+        if ($dispatched > 0) {
+            $this->info("Recent: Dispatched {$dispatched} images for compression.");
+            Log::info("app:move-compress-image recent check dispatched {$dispatched} images.");
         }
     }
 
