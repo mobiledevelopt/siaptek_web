@@ -79,7 +79,9 @@ class MoveCompressImage extends Command
      */
     private function handleBackfill()
     {
+        // HANYA CEK 7 HARI KE BELAKANG KARENA CRON BERJALAN SEMINGGU SEKALI
         $dates = AttendancesPegawai::where('date_attendance', '<', date('Y-m-d'))
+            ->where('date_attendance', '>=', now()->subDays(7)->format('Y-m-d'))
             ->where('status', 'Masuk')
             ->where(function ($query) {
                 $query->whereNotNull('foto_absen_masuk_path')

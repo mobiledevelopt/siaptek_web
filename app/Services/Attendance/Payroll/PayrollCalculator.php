@@ -51,7 +51,9 @@ class PayrollCalculator
         // POTONGAN PULANG
         // ======================
         $pulangPersen = 0;
-        if (empty($absen->outgoing_time) || $absen->outgoing_time === '00:00:00') {
+        $isPsw = empty($absen->outgoing_time) || $absen->outgoing_time === '00:00:00' || $absen->status_pulang === 'Tidak Absen Pulang (PSW)';
+        
+        if ($isPsw) {
             $cfgPulang = $config['configTpp']['pulang'];
             $pulang = $this->potong($tunjangan, 0.4, $cfgPulang->persentase_potongan);
             $pulangPersen = $cfgPulang->persentase_potongan;
