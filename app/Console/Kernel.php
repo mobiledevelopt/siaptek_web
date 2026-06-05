@@ -27,7 +27,10 @@ class Kernel extends ConsoleKernel
         $schedule->command('absen:cron')->timezone('Asia/jakarta')->twiceDaily(20, 23);
         // $schedule->command('app:move-compress-image')->timezone('Asia/jakarta')->hourly()->between('8:00', '19:00');
 
-        $schedule->command('app:move-compress-image')->timezone('Asia/jakarta')->everyMinute();
+        // Compress foto presensi: setiap 1 jam saat jam kerja
+        $schedule->command('app:move-compress-image')->timezone('Asia/jakarta')->hourly()->between('6:00', '19:00');
+
+        // Backfill: untuk foto yang terlewat (edge case upload terlambat)
         $schedule->command('app:move-compress-image backfill')->timezone('Asia/jakarta')->dailyAt('02:00');
 
         $schedule->command('app:presensi-reminder')->everyMinute();

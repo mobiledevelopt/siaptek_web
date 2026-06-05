@@ -42,16 +42,22 @@ class MoveCompressImage extends Command
     }
 
     /**
-     * Process only recently updated records (e.g. last 60 minutes).
-     * This is highly optimized for every-minute crons and automatically catches late uploads.
+     * Process only recently updated records (last 65 minutes).
+     * Cron runs every 1 jam, so 65-minute window provides safe overlap.
      */
     private function handleRecent()
     {
         $dispatched = 0;
 
-        AttendancesPegawai::where('updated_at', '>=', now()->subMinutes(60))
+        AttendancesPegawai::where('updated_at', '>=', now()->subMinutes(65))
             ->where('status', 'Masuk')
-            ->chunk(100, function ($attendances) use (&$dispatched) {
+            ->where(function ($q) {
+                $q->whereNotNull('foto_absen_masuk_path')
+                  ->orWhereNotNull('foto_absen_pulang_path')
+                  ->orWhereNotNull('foto_apel_pagi_path')
+                  ->orWhereNotNull('foto_apel_sore_path');
+            })
+            ->chunk(500, function ($attendances) use (&$dispatched) {
                 foreach ($attendances as $item) {
                     $dispatched += $this->processImage($item->foto_absen_masuk_path, "temp");
                     $dispatched += $this->processImage($item->foto_absen_pulang_path, "temp");
@@ -64,7 +70,7 @@ class MoveCompressImage extends Command
 
         if ($dispatched > 0) {
             $this->info("Recent: Dispatched {$dispatched} images for compression.");
-            Log::info("app:move-compress-image recent check dispatched {$dispatched} images.");
+            // Log::info("app:move-compress-image recent check dispatched {$dispatched} images.");
         }
     }
 

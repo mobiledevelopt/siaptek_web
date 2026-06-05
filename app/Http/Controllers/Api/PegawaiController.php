@@ -557,7 +557,7 @@ class PegawaiController extends Controller
                 return response()->json(['message' => 'Jenis foto tidak valid'], 422);
         }
 
-        Log::info("Image uploadFoto: {$request->id_absen} | {$request->jenis}");
+        // Log::info("Image uploadFoto: {$request->id_absen} | {$request->jenis}");
         $upload = $this->saveImageNew($request->file('file'), 'presensi_pegawai_upload', 'temp');
 
         $path = $upload[0];
@@ -1032,38 +1032,9 @@ class PegawaiController extends Controller
 
     public function saveImageNew($image, $folder, $tempFolder = 'temp')
     {
-
-        // if ($image->getClientOriginalExtension() === 'heic') {
-
-        //     // Generate a unique file name
-        //     $filename = time() . '-' . $image->getClientOriginalName();
-
-        //     // Optionally store the file temporarily and get the path
-        //     $file = $image->storeAs($tempFolder, $filename, 'public');
-
-        //     // Define the final storage path
-        //     $path = $folder . '/' . $filename;
-
-        //     // Dispatch the job to save the file in the background
-        //     SaveFileJob::dispatch($file, $folder, $filename,$tempFolder);
-
-        //     return [$path, url('/storage/') . '/' . $path];
-        // }
-
         $imageName = auth()->id() . '_' . time() . '.' . $image->getClientOriginalExtension();
         $path = $folder . '/' . $imageName;
         $tempPath = $image->storeAs($tempFolder, $imageName, 'public');
-
-        // Log::info("Image saved successfully: {$imageName}");
-
-
-
-        // if(getimagesize($image)[0] > 4000|| getimagesize($image)[1] > 4000){
-        //   ini_set('memory_limit', '-1');
-        //   SaveImageJob::dispatchSync($tempPath, $path,$imageName,$tempFolder);
-        // }else{
-        //     SaveImageJob::dispatch($tempPath, $path,$imageName,$tempFolder);    
-        // }
 
         return [$path, url('/storage/') . '/' . $path];
     }
