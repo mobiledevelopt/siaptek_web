@@ -34,7 +34,7 @@ class MoveCompressImage extends Command
             $this->handleBackfill();
         } elseif ($dateArg) {
             $this->info("Processing images for date: {$dateArg}");
-            Log::info("app:move-compress-image manual run for date: {$dateArg}");
+            // Log::info("app:move-compress-image manual run for date: {$dateArg}");
             $this->processDate($dateArg);
         } else {
             $this->handleRecent();
@@ -95,7 +95,7 @@ class MoveCompressImage extends Command
             ->unique();
 
         $this->info("Backfill: found {$dates->count()} dates to check.");
-        Log::info("app:move-compress-image backfill: {$dates->count()} dates to check.");
+        // Log::info("app:move-compress-image backfill: {$dates->count()} dates to check.");
 
         $totalDispatched = 0;
 
@@ -105,7 +105,7 @@ class MoveCompressImage extends Command
         }
 
         $this->info("Backfill complete. Total images dispatched: {$totalDispatched}");
-        Log::info("app:move-compress-image backfill complete. Total dispatched: {$totalDispatched}");
+        // Log::info("app:move-compress-image backfill complete. Total dispatched: {$totalDispatched}");
     }
 
     /**
@@ -121,7 +121,7 @@ class MoveCompressImage extends Command
         AttendancesPegawai::where('date_attendance', $date)
             ->where('status', 'Masuk')
             ->chunk(100, function ($attendances) use (&$dispatched, $date) {
-                Log::info("move-compress-image [{$date}] chunk count: " . $attendances->count());
+                // Log::info("move-compress-image [{$date}] chunk count: " . $attendances->count());
                 foreach ($attendances as $item) {
                     // Check and save images for each path
                     $dispatched += $this->processImage($item->foto_absen_masuk_path, "temp");

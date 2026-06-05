@@ -26,7 +26,7 @@ class PresensiPegawai extends Controller
 {
     use ResponseStatus;
 
-    private const CSV_FALLBACK_THRESHOLD = 100000;
+    private const CSV_FALLBACK_THRESHOLD = 30000;
     // private const CSV_FALLBACK_THRESHOLD = 50;
 
     public function Index(Request $request)
@@ -371,7 +371,7 @@ class PresensiPegawai extends Controller
     public function processExportInQueue(array $payload)
     {
         $this->configureExportTempDir();
-        ini_set('memory_limit', '1024M');
+        ini_set('memory_limit', '2048M');
         set_time_limit(0);
 
         $start = $payload['start'] ?? date('Y-m' . '-01');
@@ -403,8 +403,8 @@ class PresensiPegawai extends Controller
         };
 
         $detailRowCount = $this->countExportDetailRows($start, $end, $dinas, $status, $user);
-        Log::info("PresensiExportJob 1: Detail row count estimated: " . $detailRowCount);
-        Log::info("PresensiExportJob 2: Detail row count estimated: " . $detailRowCount . self::CSV_FALLBACK_THRESHOLD);
+        // Log::info("PresensiExportJob 1: Detail row count estimated: " . $detailRowCount);
+        // Log::info("PresensiExportJob 2: Detail row count estimated: " . $detailRowCount . self::CSV_FALLBACK_THRESHOLD);
 
         if ($detailRowCount > self::CSV_FALLBACK_THRESHOLD) {
             $files = $this->generatePresensiCsvExport($start, $end, $dinas, $status, $user);
