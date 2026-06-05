@@ -8,19 +8,21 @@ use App\Services\Attendance\Payroll\PayrollCalculator;
 
 class AttendanceCronHandler
 {
-    protected function config()
+    protected function config($date = null)
     {
         return [
-            'jmlHariKerja' => AttendanceCache::jmlHariKerja(),
+            'jmlHariKerja' => AttendanceCache::jmlHariKerja($date),
             'configTpp' => AttendanceCache::potonganTpp()->keyBy('group')
         ];
     }
 
     public function handle($user)
     {
-        $config = $this->config();
-
         $absen = AttendanceRepository::today($user->id);
+        
+        // Pass the date to config so it fetches the correct Jml_hari_kerja for that month
+        $date = $absen ? $absen->date_attendance : today()->format('Y-m-d');
+        $config = $this->config($date);
         // $absen = AttendanceRepository::fromDate($user->id, '2026-05-12');
 
         // Skip non-working (Cuti, Izin) DULUAN agar tidak tertimpa Alpha

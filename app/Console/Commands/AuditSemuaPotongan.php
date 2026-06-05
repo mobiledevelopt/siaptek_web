@@ -43,7 +43,16 @@ class AuditSemuaPotongan extends Command
 
         $query->chunk(1000, function ($absens) use ($levelTelat, $isFix, $isExport, &$salahCount, &$totalCheck, &$csvData, $bar) {
             foreach ($absens as $absen) {
-                $tunjanganPerHari = (float) $absen->tunjangan_per_hari;
+                // 0. Kalkulasi Tunjangan Per Hari yang Tepat
+                $absenDate = \Carbon\Carbon::parse($absen->date_attendance);
+                $jmlHariKerja = \App\Models\Jml_hari_kerja::where('bulan', $absenDate->month)
+                    ->where('tahun', $absenDate->year)
+                    ->first();
+                $jmlHari = $jmlHariKerja ? $jmlHariKerja->jml_hari_kerja : 20; // Default fallback
+                
+                $tppPegawai = $absen->pegawai->tpp ?? 0;
+                $tunjanganPerHari = $tppPegawai > 0 ? $tppPegawai / $jmlHari : (float) $absen->tunjangan_per_hari;
+
                 $isSalah = false;
                 $msgs = [];
                 $csvRows = [];
@@ -90,12 +99,18 @@ class AuditSemuaPotongan extends Command
                     }
                 }
 
+                // Fetch dynamic configs once outside the loop or inside (for simplicity)
+                $configPulang = \App\Models\ConfigPotTpp::where('group', 'pulang')->first();
+                $configApel = \App\Models\ConfigPotTpp::where('group', 'apel')->first();
+                $persenPulangDb = $configPulang ? $configPulang->persentase_potongan : 20;
+                $persenApelDb = $configApel ? $configApel->persentase_potongan : 20;
+
                 // 2. Cek Potongan Pulang Cepat (PSW) / Tidak Absen Pulang
                 $isPsw = empty($absen->outgoing_time) || $absen->outgoing_time === '00:00:00' || $absen->status_pulang === 'Tidak Absen Pulang (PSW)';
                 
                 if ($absen->status === 'Masuk' && ($isPsw || (float)$absen->potongan_absen_pulang > 0 || (float)$absen->potongan_absen_pulang_persen > 0)) {
-                    // PSW SOP is 20% according to config, or 0% if not PSW but has weird DB values
-                    $persenSop = $isPsw ? 20 : 0; 
+                    // PSW SOP is dynamic according to config
+                    $persenSop = $isPsw ? $persenPulangDb : 0; 
                     $persenAktual = (float) $absen->potongan_absen_pulang_persen;
                     $seharusnya = (int) round(($tunjanganPerHari * 40 / 100) * ($persenSop / 100));
 
@@ -128,7 +143,7 @@ class AuditSemuaPotongan extends Command
 
                 if ($absen->status === 'Masuk' && ($isTidakApelPagi || (float)$absen->potongan_tidak_apel_pagi > 0 || (float)$absen->potongan_tidak_apel_pagi_persen > 0)) {
                     $isFriday = \Carbon\Carbon::parse($absen->date_attendance)->dayOfWeekIso == 5;
-                    $persenSop = $isTidakApelPagi ? ($isFriday ? 10 : 20) : 0; // Sesuai SOP
+                    $persenSop = $isTidakApelPagi ? ($isFriday ? ($persenApelDb / 2) : $persenApelDb) : 0;
                     $persenAktual = (float) $absen->potongan_tidak_apel_pagi_persen;
                     $seharusnya = (int) round(($tunjanganPerHari * 40 / 100) * ($persenSop / 100));
 
@@ -164,7 +179,7 @@ class AuditSemuaPotongan extends Command
                 
                 // Audit jika: ini hari Jumat (lalu dia tidak hadir), ATAU ada data potongan Apel Sore yang terekam (padahal bukan Jumat)
                 if ($absen->status === 'Masuk' && (($isFriday && $isTidakApelSore) || $hasApelSoreData)) {
-                    $persenSop = ($isFriday && $isTidakApelSore) ? 10 : 0; // Hanya Jumat yang ada Apel Sore (10%)
+                    $persenSop = ($isFriday && $isTidakApelSore) ? ($persenApelDb / 2) : 0; // Hanya Jumat yang ada Apel Sore (dynamic / 2)
                     $persenAktual = (float) $absen->potongan_tidak_apel_sore_persen;
                     $seharusnya = (int) round(($tunjanganPerHari * 40 / 100) * ($persenSop / 100));
 

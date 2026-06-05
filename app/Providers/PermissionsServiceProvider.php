@@ -29,7 +29,11 @@ class PermissionsServiceProvider extends ServiceProvider
   {
 
     try {
-      Permission::get()->map(function ($permission) {
+      $permissions = cache()->remember('permissions_all', 3600, function () {
+        return Permission::get();
+      });
+
+      $permissions->map(function ($permission) {
         Gate::define($permission->slug, function ($user) use ($permission) {
           return $user->hasPermissionTo($permission);
         });

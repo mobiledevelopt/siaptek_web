@@ -9,8 +9,9 @@ class PayrollCalculator
      */
     public function calculate($absen, $user, array $config): array
     {
-        // Cek apakah hari ini Jumat
-        $isFriday = now()->dayOfWeekIso == 5;
+        // Cek apakah hari ini Jumat berdasarkan TANGGAL ABSEN, bukan now()
+        $absenDate = $absen ? \Carbon\Carbon::parse($absen->date_attendance) : now();
+        $isFriday = $absenDate->dayOfWeekIso == 5;
         $tunjangan = $user->tpp / $config['jmlHariKerja'];
 
 

@@ -42,10 +42,11 @@ class AttendanceCache
         );
     }
     
-    public static function jmlHariKerja()
+    public static function jmlHariKerja($date = null)
     {
-        $bulan = Carbon::now()->month;
-        $tahun = Carbon::now()->year;
+        $parsedDate = $date ? Carbon::parse($date) : Carbon::now();
+        $bulan = $parsedDate->month;
+        $tahun = $parsedDate->year;
 
         return Cache::remember(
             "jml_hari_kerja_{$bulan}_{$tahun}",
