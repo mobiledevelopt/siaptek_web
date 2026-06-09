@@ -57,6 +57,13 @@ class PegawaiController extends Controller
             return response()->json(['message' => implode("  ", $messages)], 422);
         }
 
+        $lock = Cache::lock('clockin_' . $request->user()->id, 10);
+        if (!$lock->get()) {
+            return response()->json(['message' => 'Sedang memproses presensi, mohon tunggu...'], 429);
+        }
+
+        try {
+
         // 0 minggu, 1 senin, 2 selasa, 3 rabu, 4 kamis, 5 jumat, 6 sabtu
         //cek jadwal absen
         if (date('w') == 0) {
@@ -262,6 +269,9 @@ class PegawaiController extends Controller
             return response()->json([
                 'message' => $throw->getMessage()
             ], 500);
+        }
+        } finally {
+            $lock->release();
         }
     }
 

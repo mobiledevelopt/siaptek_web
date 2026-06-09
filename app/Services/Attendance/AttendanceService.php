@@ -12,6 +12,12 @@ class AttendanceService
 {
     public function clockIn($user)
     {
+        $lock = \Illuminate\Support\Facades\Cache::lock('clockin_service_' . $user->id, 10);
+        if (!$lock->get()) {
+            throw new ApiException('Sistem sedang memproses presensi Anda, mohon tunggu beberapa saat.', 429, ErrorCode::ALREADY_CLOCKED_IN);
+        }
+
+        try {
 
         $absen = AttendanceRepository::today($user->id);
 
@@ -56,6 +62,9 @@ class AttendanceService
             $configPotTppId,
             $tunjanganPerHari
         );
+        } finally {
+            $lock->release();
+        }
     }
 
     public function clockOut($user)
