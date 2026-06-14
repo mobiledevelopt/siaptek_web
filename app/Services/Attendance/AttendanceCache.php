@@ -66,7 +66,7 @@ class AttendanceCache
             "jadwal_apel_{$dinasId}_$day",
             now()->addHour(),
             function () use ($dinasId, $day) {
-                Log::info("Cache MISS: jadwal_apel_{$dinasId}_$day (generating new data)");
+                // Log::info("Cache MISS: jadwal_apel_{$dinasId}_$day (generating new data)");
                 return JadwalApel::where(['dinas_id' => $dinasId, 'hari' => $day])->first();
             }
         );
