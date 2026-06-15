@@ -94,29 +94,35 @@ class IzinPegawai extends Controller
      */
     public function show(Request $request, string $id)
     {
+        $detail = DB::table("izin_pegawai")
+            ->select([
+                'izin_pegawai.id as id',
+                'config_potongan_tpp.title as jenis',
+                'dinas.name as dinas',
+                'tgl as date',
+                'sampai_tgl as sampai',
+                'pegawai.name as pegawai',
+                'desc',
+                'attachment',
+                'status',
+                'alasan_ditolak'
+            ])
+            ->leftJoin("pegawai", "pegawai.id", "=", "izin_pegawai.pegawai_id")
+            ->leftJoin("dinas", "dinas.id", "=", "pegawai.dinas_id")
+            ->leftJoin("config_potongan_tpp", "config_potongan_tpp.id", "=", "izin_pegawai.jenis_izin_id")
+            ->where("izin_pegawai.id", "=", $id)
+            ->first();
+
+        if (!$detail) {
+            abort(404, 'Data Izin tidak ditemukan');
+        }
+
         return view("contents.izin.pegawai.detail")->with([
             "title" => "Detail Izin",
             'method' => 'PUT',
             'role' => $request->user()->role_id,
             'action' => route('web-izin.update', $id),
-            "detail" => DB::table("izin_pegawai")
-                ->select([
-                    'izin_pegawai.id as id',
-                    'config_potongan_tpp.title as jenis',
-                    'dinas.name as dinas',
-                    'tgl as date',
-                    'sampai_tgl as sampai',
-                    'pegawai.name as pegawai',
-                    'desc',
-                    'attachment',
-                    'status',
-                    'alasan_ditolak'
-                ])
-                ->join("pegawai", "pegawai.id", "=", "izin_pegawai.pegawai_id")
-                ->join("dinas", "dinas.id", "=", "pegawai.dinas_id")
-                ->join("config_potongan_tpp", "config_potongan_tpp.id", "=", "izin_pegawai.jenis_izin_id")
-                ->where("izin_pegawai.id", "=", $id)
-                ->first()
+            "detail" => $detail
         ]);
     }
 
