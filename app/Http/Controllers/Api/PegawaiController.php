@@ -1042,7 +1042,7 @@ class PegawaiController extends Controller
 
     public function saveImageNew($image, $folder, $tempFolder = 'temp')
     {
-        $imageName = auth()->id() . '_' . time() . '.' . $image->getClientOriginalExtension();
+        $imageName = auth()->id() . '_' . now()->format('YmdHis') . '.' . $image->getClientOriginalExtension();
         $path = $folder . '/' . $imageName;
         $tempPath = $image->storeAs($tempFolder, $imageName, 'public');
 
