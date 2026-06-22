@@ -321,7 +321,7 @@ class DaftarHadirApelController extends Controller
         //     return [$path, url('/storage/') . '/' . $path];
         // }
 
-        $imageName = auth()->id() . '_' . now()->format('YmdHis') . '.' . $image->getClientOriginalExtension();
+        $imageName = auth()->id() . '_' . now()->format('YmdHis') . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
         $path = $folder . '/' . $imageName;
         $tempPath = $image->storeAs($tempFolder, $imageName, 'public');
 
