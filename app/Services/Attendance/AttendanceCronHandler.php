@@ -16,13 +16,15 @@ class AttendanceCronHandler
         ];
     }
 
-    public function handle($user)
+    public function handle($user, $absen = null, $isPreloaded = false, $config = null)
     {
-        $absen = AttendanceRepository::today($user->id);
+        if (!$isPreloaded) {
+            $absen = AttendanceRepository::today($user->id);
+        }
         
         // Pass the date to config so it fetches the correct Jml_hari_kerja for that month
         $date = $absen ? $absen->date_attendance : today()->format('Y-m-d');
-        $config = $this->config($date);
+        $config = $config ?? $this->config($date);
         // $absen = AttendanceRepository::fromDate($user->id, '2026-05-12');
 
         // Skip non-working (Cuti, Izin) DULUAN agar tidak tertimpa Alpha
@@ -32,36 +34,44 @@ class AttendanceCronHandler
 
         // Jika tidak ada absen ATAU absen kosong tapi bukan cuti → alpha
         if (!$absen || empty($absen->incoming_time) || $absen->incoming_time === '00:00:00') {
-            return $this->handleAlpha($user, $config);
+            return $this->handleAlpha($user, $config, $absen);
         }
 
-        return $this->handleIncomplete($absen, $user, $config);
+        return $this->handleIncomplete($absen, $user, $config, $isPreloaded);
     }
 
-    protected function handleAlpha($user, $config)
+    protected function handleAlpha($user, $config, $absen = null)
     {
-        $tunjangan = $user->tpp / $config['jmlHariKerja'];
-        $alpha = $config['configTpp']['alfa'];
+        $jmlHariKerja = max(1, $config['jmlHariKerja'] ?? 22);
+        $tunjangan = ($user->tpp ?? 0) / $jmlHariKerja;
+        $alpha = $config['configTpp']['alfa'] ?? null;
+        
+        if (!$alpha) {
+            \Illuminate\Support\Facades\Log::warning("Config alfa missing in AbsenCron");
+            return false;
+        }
 
-        return AttendancesPegawai::updateOrCreate(
-            [
-                'pegawai_id' => $user->id,
-                'date_attendance' => today(),
-            ],
-            [
-                'dinas_id' => $user->dinas_id,
-                'incoming_time' => '00:00:00',
-                'outgoing_time' => '00:00:00',
-                'status' => 'Tidak Masuk',
-                'tunjangan_per_hari' => $tunjangan,
-                'config_potongan_tpp_id' => $alpha->id,
-                'tpp_diterima' => 0,
-                'total_potongan_tpp' => (int) round($tunjangan),
-                'ket_tidak_masuk_kerja' => $alpha->title,
-                'potongan_tidak_masuk_kerja_persen' => $alpha->persentase_potongan,
-                'potongan_tidak_masuk_kerja' => (int) round($tunjangan),
-            ]
-        );
+        $data = [
+            'dinas_id' => $user->dinas_id,
+            'incoming_time' => '00:00:00',
+            'outgoing_time' => '00:00:00',
+            'status' => 'Tidak Masuk',
+            'tunjangan_per_hari' => $tunjangan,
+            'config_potongan_tpp_id' => $alpha->id,
+            'tpp_diterima' => 0,
+            'total_potongan_tpp' => (int) round($tunjangan),
+            'ket_tidak_masuk_kerja' => $alpha->title,
+            'potongan_tidak_masuk_kerja_persen' => $alpha->persentase_potongan,
+            'potongan_tidak_masuk_kerja' => (int) round($tunjangan),
+        ];
+
+        if ($absen) {
+            return AttendancesPegawai::where('id', $absen->id)->update($data);
+        } else {
+            $data['pegawai_id'] = $user->id;
+            $data['date_attendance'] = today()->format('Y-m-d');
+            return AttendancesPegawai::create($data);
+        }
     }
 
     protected function isNonWorkingStatus($absen): bool
@@ -71,7 +81,7 @@ class AttendanceCronHandler
         return in_array($status, ['izin', 'cuti', 'dinas luar']);
     }
 
-    protected function handleIncomplete($absen, $user, $config)
+    protected function handleIncomplete($absen, $user, $config, $isPreloaded = false)
     {
         $calculator = new PayrollCalculator();
 
@@ -79,7 +89,7 @@ class AttendanceCronHandler
         $calc = $calculator->calculate($absen, $user, $config);
 
         // 🔥 AUDIT LOG (IDEMPOTENT)
-        PotonganLogger::logFromCalculator($absen, $user, $calc);
+        PotonganLogger::logFromCalculator($absen, $user, $calc, $isPreloaded);
 
         $isFriday = now()->dayOfWeekIso === 5;
         $hadirApelPagi = !empty($absen->apel_pagi_at) || strtolower(trim($absen->status_apel_pagi ?? '')) === 'hadir';

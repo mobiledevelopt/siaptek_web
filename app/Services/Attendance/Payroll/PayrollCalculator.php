@@ -12,7 +12,8 @@ class PayrollCalculator
         // Cek apakah hari ini Jumat berdasarkan TANGGAL ABSEN, bukan now()
         $absenDate = $absen ? \Carbon\Carbon::parse($absen->date_attendance) : now();
         $isFriday = $absenDate->dayOfWeekIso == 5;
-        $tunjangan = $user->tpp / $config['jmlHariKerja'];
+        $jmlHariKerja = max(1, $config['jmlHariKerja'] ?? 22);
+        $tunjangan = ($user->tpp ?? 0) / $jmlHariKerja;
 
 
         // ✅ skip non-working

@@ -12,7 +12,7 @@ class Kernel extends ConsoleKernel
 
     protected $commands = [
         Commands\AbsenCron::class,
-        Commands\MoveCompressImage::class
+        Commands\MoveCompressImage::class,
     ];
 
     /**
